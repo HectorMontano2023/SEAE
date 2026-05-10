@@ -1,5 +1,6 @@
 package ues.edu.ine.componentes.ui;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
@@ -29,6 +30,7 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.VaadinSession;
 
 import ues.edu.ine.base.ui.MainLayout;
@@ -94,12 +96,15 @@ public class CostoAnualView extends VerticalLayout {
 
         Button calcular = new Button("Calcular");
         estiloBoton(calcular);
-        Button exportar = new Button("Exportar PDF");
-        estiloBoton(exportar);
-        exportar.setEnabled(false);
-        exportar.setEnabled(false);
+        Button exportarBtn = new Button("Exportar PDF");
+        exportarBtn.setEnabled(false);
+        estiloBoton(exportarBtn);
 
-        HorizontalLayout acciones = new HorizontalLayout(calcular, exportar);
+        Anchor exportarAnchor = new Anchor();
+        exportarAnchor.getElement().setAttribute("download", "reporte_costo_anual.pdf");
+        exportarAnchor.add(exportarBtn);
+
+        HorizontalLayout acciones = new HorizontalLayout(calcular, exportarAnchor);
         acciones.setSpacing(true);
 
         VerticalLayout indicaciones = new VerticalLayout();
@@ -128,30 +133,25 @@ public class CostoAnualView extends VerticalLayout {
         calcular.addClickListener(event -> {
             ResultadoComparacion resultadoCalculado = calcularResultados();
             if (!mostrarResultado(resultadoCalculado)) {
-                exportar.setEnabled(false);
                 panelResultados.setVisible(false);
                 indicaciones.setVisible(true);
+                exportarBtn.setEnabled(false);
+                exportarAnchor.removeHref();
                 return;
             }
 
             panelResultados.setVisible(true);
             indicaciones.setVisible(false);
-            exportar.setEnabled(true);
+            exportarBtn.setEnabled(true);
+            exportarAnchor.setHref(new StreamResource("reporte_costo_anual.pdf", () -> {
+                try {
+                    return new ByteArrayInputStream(generarPdf());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return new ByteArrayInputStream(new byte[0]);
+                }
+            }));
             Notification.show("Calculo realizado", 3000, Position.MIDDLE);
-        });
-
-        Anchor descargaPdf = new Anchor();
-        descargaPdf.getElement().setAttribute("download", "reporte_costo_anual.pdf");
-        descargaPdf.getStyle().set("display", "none");
-
-        exportar.addClickListener(event -> {
-            if (ultimoResultado == null) {
-                Notification.show("Primero realice un calculo valido antes de exportar.");
-                return;
-            }
-
-            descargaPdf.setHref(crearUrlPdf());
-            descargaPdf.getElement().executeJs("setTimeout(function() { $0.click(); }, 150);", descargaPdf.getElement());
         });
 
         mainContainer.add(
@@ -161,8 +161,7 @@ public class CostoAnualView extends VerticalLayout {
             tasaLayout,
             acciones,
             indicaciones,
-            panelResultados,
-            descargaPdf
+            panelResultados
         );
 
         add(mainContainer);

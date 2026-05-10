@@ -12,6 +12,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
 
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -92,14 +93,17 @@ public class ValorPresenteView extends VerticalLayout {
         tasaLayout.add(tasaLabel, tasaDescuento);
 
         Button comparar = new Button("Comparar");
-        Button exportar = new Button("Exportar PDF");
+        Button exportarBtn = new Button("Exportar PDF");
         estiloBoton(comparar);
-        estiloBoton(exportar);
-        exportar.setEnabled(false);
+        estiloBoton(exportarBtn);
+        exportarBtn.setEnabled(false);
 
-        Anchor descargaPdf = new Anchor();
-        descargaPdf.getElement().setAttribute("download", "reporte_valor_presente.pdf");
-        descargaPdf.getStyle().set("display", "none");
+        Anchor exportarAnchor = new Anchor();
+        exportarAnchor.getElement().setAttribute("download", "reporte_valor_presente.pdf");
+        exportarAnchor.add(exportarBtn);
+
+        HorizontalLayout botones = new HorizontalLayout(comparar, exportarAnchor);
+        botones.addClassName("seae-actions");
 
         VerticalLayout indicaciones = new VerticalLayout();
         indicaciones.setWidthFull();
@@ -129,7 +133,8 @@ public class ValorPresenteView extends VerticalLayout {
                 ResultadoVP resultadoCalculado = calcularResultado();
                 if (resultadoCalculado == null) {
                     ultimoResultado = null;
-                    exportar.setEnabled(false);
+                    exportarBtn.setEnabled(false);
+                    exportarAnchor.removeHref();
                     panelResultados.setVisible(false);
                     indicaciones.setVisible(true);
                     Notification.show("Complete todos los campos correctamente");
@@ -139,36 +144,27 @@ public class ValorPresenteView extends VerticalLayout {
                 mostrarResultado(resultadoCalculado);
                 panelResultados.setVisible(true);
                 indicaciones.setVisible(false);
-                exportar.setEnabled(true);
+                exportarBtn.setEnabled(true);
+                exportarAnchor.setHref(new StreamResource("reporte_valor_presente.pdf", () -> {
+                    try {
+                        return new ByteArrayInputStream(generarPdf(resultadoCalculado));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return new ByteArrayInputStream(new byte[0]);
+                    }
+                }));
                 Notification.show("Comparacion realizada", 3500, Position.MIDDLE);
             } catch (IllegalArgumentException ex) {
                 ultimoResultado = null;
-                exportar.setEnabled(false);
+                exportarBtn.setEnabled(false);
+                exportarAnchor.removeHref();
                 panelResultados.setVisible(false);
                 indicaciones.setVisible(true);
                 Notification.show(ex.getMessage(), 4000, Position.MIDDLE);
             }
         });
 
-        exportar.addClickListener(event -> {
-            if (ultimoResultado == null) {
-                Notification.show("Primero realice una comparacion valida antes de exportar.");
-                return;
-            }
-
-            try {
-                descargaPdf.setHref("data:application/pdf;base64," + Base64.getEncoder().encodeToString(generarPdf(ultimoResultado)));
-                descargaPdf.getElement().executeJs("setTimeout(function() { $0.click(); }, 150);", descargaPdf.getElement());
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                Notification.show("Error al generar PDF: " + ex.getMessage(), 5000, Position.MIDDLE);
-            }
-        });
-
-        HorizontalLayout botones = new HorizontalLayout(comparar, exportar);
-        botones.addClassName("seae-actions");
-
-        mainContainer.add(titulo, subtitulo, alternativas, tasaLayout, botones, indicaciones, panelResultados, descargaPdf);
+        mainContainer.add(titulo, subtitulo, alternativas, tasaLayout, botones, indicaciones, panelResultados);
         add(mainContainer);
     }
 

@@ -7,6 +7,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.StringJoiner;
 
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -78,16 +79,16 @@ public class TasaRendimientoView extends VerticalLayout {
         alternativas.setJustifyContentMode(JustifyContentMode.CENTER);
 
         Button calcular = new Button("Comparar");
-        Button exportar = new Button("Exportar PDF");
+        Button exportarBtn = new Button("Exportar PDF");
         estiloBoton(calcular);
-        estiloBoton(exportar);
-        exportar.setEnabled(false);
+        estiloBoton(exportarBtn);
+        exportarBtn.setEnabled(false);
 
-        Anchor descargaPdf = new Anchor();
-        descargaPdf.getElement().setAttribute("download", "reporte_tir.pdf");
-        descargaPdf.getStyle().set("display", "none");
+        Anchor exportarAnchor = new Anchor();
+        exportarAnchor.getElement().setAttribute("download", "reporte_tir.pdf");
+        exportarAnchor.add(exportarBtn);
 
-        HorizontalLayout botones = new HorizontalLayout(calcular, exportar);
+        HorizontalLayout botones = new HorizontalLayout(calcular, exportarAnchor);
         botones.addClassName("seae-actions");
 
         VerticalLayout panelResultados = new VerticalLayout();
@@ -123,7 +124,6 @@ public class TasaRendimientoView extends VerticalLayout {
                     ultimoResultado = null;
                     panelResultados.setVisible(false);
                     indicaciones.setVisible(true);
-                    exportar.setEnabled(false);
                     Notification.show("Complete correctamente los datos de ambas alternativas");
                     return;
                 }
@@ -131,34 +131,27 @@ public class TasaRendimientoView extends VerticalLayout {
                 mostrarResultado(resultado);
                 panelResultados.setVisible(true);
                 indicaciones.setVisible(false);
-                exportar.setEnabled(true);
+                exportarBtn.setEnabled(true);
+                exportarAnchor.setHref(new StreamResource("reporte_tir.pdf", () -> {
+                    try {
+                        return new ByteArrayInputStream(generarPDF(resultado));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return new ByteArrayInputStream(new byte[0]);
+                    }
+                }));
                 Notification.show("Comparacion realizada", 3000, Position.MIDDLE);
             } catch (IllegalArgumentException ex) {
                 ultimoResultado = null;
                 panelResultados.setVisible(false);
                 indicaciones.setVisible(true);
-                exportar.setEnabled(false);
+                exportarBtn.setEnabled(false);
+                exportarAnchor.removeHref();
                 Notification.show(ex.getMessage(), 4500, Position.MIDDLE);
             }
         });
 
-        exportar.addClickListener(event -> {
-            if (ultimoResultado == null) {
-                Notification.show("Primero realice una comparacion valida antes de exportar.");
-                return;
-            }
-
-            try {
-                descargaPdf.setHref("data:application/pdf;base64," + Base64.getEncoder().encodeToString(generarPDF(ultimoResultado)));
-                descargaPdf.getElement().executeJs("setTimeout(function() { $0.click(); }, 150);", descargaPdf.getElement());
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                Notification.show("Error al generar PDF: " + ex.getMessage(), 5000, Position.MIDDLE);
-            }
-        });
-
         mainContainer.add(titulo, subtitulo, alternativas, botones, indicaciones, panelResultados);
-        mainContainer.add(descargaPdf);
         add(mainContainer);
     }
 
