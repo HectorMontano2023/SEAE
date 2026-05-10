@@ -189,7 +189,7 @@ public class ValorPresenteView extends VerticalLayout {
 
         NumberField inversion = crearCampoNumero("Inversion inicial", "Ingrese la inversion inicial");
         NumberField flujo = crearCampoNumero("Flujo anual", "Ingrese el flujo de efectivo");
-        NumberField vida = crearCampoNumero("Vida util (anos)", "Ingrese el numero de anos");
+        NumberField vida = crearCampoNumero("Vida util (años)", "Ingrese el numero de años");
         vida.setStep(1);
         vida.setMin(1);
 
@@ -223,28 +223,29 @@ public class ValorPresenteView extends VerticalLayout {
     }
 
     private double calcularVP(AlternativaVP alternativa, double tasa) {
-        double inversionInicial = obtenerNumeroObligatorio(alternativa.inversion(), "Complete todos los campos correctamente");
+        double inversionInicial = obtenerNumeroObligatorio(alternativa.inversion(),
+                "Complete todos los campos correctamente");
         double flujoEfectivo = obtenerNumeroObligatorio(alternativa.flujo(), "Complete todos los campos correctamente");
-        int anos = obtenerAnosObligatorios(alternativa.vida(), "La vida util debe ser mayor que cero");
+        int anios = obtenerAniosObligatorios(alternativa.vida(), "La vida util debe ser mayor que cero");
 
         double i = tasa / 100.0;
         double vpFlujos = 0;
 
-        for (int t = 1; t <= anos; t++) {
+        for (int t = 1; t <= anios; t++) {
             vpFlujos += flujoEfectivo / Math.pow(1 + i, t);
         }
 
         return vpFlujos - inversionInicial;
     }
 
-    private int obtenerAnosObligatorios(NumberField field, String mensajeError) {
+    private int obtenerAniosObligatorios(NumberField field, String mensajeError) {
         double valor = obtenerNumeroObligatorio(field, mensajeError);
-        int anos = (int) Math.round(valor);
-        if (anos <= 0 || Math.abs(anos - valor) > 0.00001) {
+        int anios = (int) Math.round(valor);
+        if (anios <= 0 || Math.abs(anios - valor) > 0.00001) {
             throw new IllegalArgumentException(mensajeError);
         }
 
-        return anos;
+        return anios;
     }
 
     private double obtenerNumeroObligatorio(NumberField field, String mensajeError) {
@@ -290,7 +291,8 @@ public class ValorPresenteView extends VerticalLayout {
         contentStream.fill();
     }
 
-    private void dibujarEncabezado(PDPageContentStream contentStream, float pageWidth, float pageHeight, ResultadoVP resultado) throws Exception {
+    private void dibujarEncabezado(PDPageContentStream contentStream, float pageWidth, float pageHeight,
+            ResultadoVP resultado) throws Exception {
         contentStream.setNonStrokingColor(rgb(36, 64, 111));
         contentStream.addRect(0, pageHeight - 115, pageWidth, 115);
         contentStream.fill();
@@ -320,19 +322,23 @@ public class ValorPresenteView extends VerticalLayout {
         contentStream.endText();
     }
 
-    private void dibujarContenido(PDPageContentStream contentStream, ResultadoVP resultado, float pageHeight) throws Exception {
+    private void dibujarContenido(PDPageContentStream contentStream, ResultadoVP resultado, float pageHeight)
+            throws Exception {
         float leftX = 50;
         float cardWidth = 240;
         float cardHeight = 200;
         float gap = 18;
 
-        dibujarTarjetaAlternativa(contentStream, leftX, 650, cardWidth, cardHeight, "Alternativa A", resultado.alternativaA(), resultado.vpA(), new int[] { 54, 93, 173 });
-        dibujarTarjetaAlternativa(contentStream, leftX + cardWidth + gap, 650, cardWidth, cardHeight, "Alternativa B", resultado.alternativaB(), resultado.vpB(), new int[] { 91, 123, 216 });
+        dibujarTarjetaAlternativa(contentStream, leftX, 650, cardWidth, cardHeight, "Alternativa A",
+                resultado.alternativaA(), resultado.vpA(), new int[] { 54, 93, 173 });
+        dibujarTarjetaAlternativa(contentStream, leftX + cardWidth + gap, 650, cardWidth, cardHeight, "Alternativa B",
+                resultado.alternativaB(), resultado.vpB(), new int[] { 91, 123, 216 });
 
         dibujarBloqueResumen(contentStream, leftX, 395, pageHeight - 100, 130, resultado);
     }
 
-    private void dibujarTarjetaAlternativa(PDPageContentStream contentStream, float x, float y, float width, float height, String titulo, AlternativaVP alternativa, double vp, int[] colorBarra) throws Exception {
+    private void dibujarTarjetaAlternativa(PDPageContentStream contentStream, float x, float y, float width,
+            float height, String titulo, AlternativaVP alternativa, double vp, int[] colorBarra) throws Exception {
         contentStream.setNonStrokingColor(rgb(255, 255, 255));
         contentStream.addRect(x, y - height, width, height);
         contentStream.fill();
@@ -356,17 +362,22 @@ public class ValorPresenteView extends VerticalLayout {
         float textY = y - 48;
         float lineGap = 17;
 
-        dibujarLineaClaveValor(contentStream, textX, textY, "Inversion inicial", "$" + formatear(alternativa.inversion().getValue()));
-        dibujarLineaClaveValor(contentStream, textX, textY - lineGap, "Flujo anual", "$" + formatear(alternativa.flujo().getValue()));
-        dibujarLineaClaveValor(contentStream, textX, textY - (lineGap * 2), "Vida util", formatear(alternativa.vida().getValue()) + " anos");
+        dibujarLineaClaveValor(contentStream, textX, textY, "Inversion inicial",
+                "$" + formatear(alternativa.inversion().getValue()));
+        dibujarLineaClaveValor(contentStream, textX, textY - lineGap, "Flujo anual",
+                "$" + formatear(alternativa.flujo().getValue()));
+        dibujarLineaClaveValor(contentStream, textX, textY - (lineGap * 2), "Vida util",
+                formatear(alternativa.vida().getValue()) + " años");
 
         contentStream.setStrokingColor(rgb(230, 235, 244));
         contentStream.moveTo(x + 12, y - 90);
         contentStream.lineTo(x + width - 12, y - 90);
         contentStream.stroke();
 
-        dibujarLineaTexto(contentStream, textX, y - 110, "Valor Presente:", PDType1Font.HELVETICA_BOLD, 10, rgb(71, 85, 105));
-        dibujarLineaTexto(contentStream, textX + 118, y - 110, "$" + formatear(vp), PDType1Font.HELVETICA_BOLD, 11, rgb(31, 65, 135));
+        dibujarLineaTexto(contentStream, textX, y - 110, "Valor Presente:", PDType1Font.HELVETICA_BOLD, 10,
+                rgb(71, 85, 105));
+        dibujarLineaTexto(contentStream, textX + 118, y - 110, "$" + formatear(vp), PDType1Font.HELVETICA_BOLD, 11,
+                rgb(31, 65, 135));
 
         contentStream.beginText();
         contentStream.setNonStrokingColor(rgb(109, 117, 130));
@@ -376,7 +387,8 @@ public class ValorPresenteView extends VerticalLayout {
         contentStream.endText();
     }
 
-    private void dibujarLineaClaveValor(PDPageContentStream contentStream, float x, float y, String etiqueta, String valor) throws Exception {
+    private void dibujarLineaClaveValor(PDPageContentStream contentStream, float x, float y, String etiqueta,
+            String valor) throws Exception {
         contentStream.beginText();
         contentStream.setNonStrokingColor(rgb(71, 85, 105));
         contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
@@ -392,7 +404,8 @@ public class ValorPresenteView extends VerticalLayout {
         contentStream.endText();
     }
 
-    private void dibujarBloqueResumen(PDPageContentStream contentStream, float x, float y, float width, float height, ResultadoVP resumen) throws Exception {
+    private void dibujarBloqueResumen(PDPageContentStream contentStream, float x, float y, float width, float height,
+            ResultadoVP resumen) throws Exception {
         contentStream.setNonStrokingColor(rgb(31, 65, 135));
         contentStream.addRect(x, y - height, 500, height);
         contentStream.fill();
@@ -419,7 +432,8 @@ public class ValorPresenteView extends VerticalLayout {
         contentStream.setNonStrokingColor(rgb(15, 23, 42));
         contentStream.setFont(PDType1Font.HELVETICA_BOLD, 11);
         contentStream.newLineAtOffset(x + 16, y - 72);
-        contentStream.showText("VP Alternativa A: $" + formatear(resumen.vpA()) + "   VP Alternativa B: $" + formatear(resumen.vpB()));
+        contentStream.showText(
+                "VP Alternativa A: $" + formatear(resumen.vpA()) + "   VP Alternativa B: $" + formatear(resumen.vpB()));
         contentStream.endText();
 
         contentStream.setNonStrokingColor(rgb(236, 241, 252));
@@ -448,7 +462,8 @@ public class ValorPresenteView extends VerticalLayout {
         contentStream.endText();
     }
 
-    private void dibujarLineaTexto(PDPageContentStream contentStream, float x, float y, String texto, PDType1Font font, int size, PDColor color) throws Exception {
+    private void dibujarLineaTexto(PDPageContentStream contentStream, float x, float y, String texto, PDType1Font font,
+            int size, PDColor color) throws Exception {
         contentStream.beginText();
         contentStream.setNonStrokingColor(color);
         contentStream.setFont(font, size);
@@ -461,7 +476,6 @@ public class ValorPresenteView extends VerticalLayout {
         return new PDColor(new float[] { red / 255f, green / 255f, blue / 255f }, PDDeviceRGB.INSTANCE);
     }
 
-
     private String formatear(double valor) {
         return String.format("%.2f", valor);
     }
@@ -469,6 +483,7 @@ public class ValorPresenteView extends VerticalLayout {
     private record AlternativaVP(VerticalLayout container, NumberField inversion, NumberField flujo, NumberField vida) {
     }
 
-    private record ResultadoVP(double tasa, double vpA, double vpB, String mejor, AlternativaVP alternativaA, AlternativaVP alternativaB) {
+    private record ResultadoVP(double tasa, double vpA, double vpB, String mejor, AlternativaVP alternativaA,
+            AlternativaVP alternativaB) {
     }
 }

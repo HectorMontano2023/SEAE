@@ -103,7 +103,8 @@ public class TasaRendimientoView extends VerticalLayout {
         indicaciones.setAlignItems(Alignment.CENTER);
         indicaciones.addClassName("seae-callout-card");
 
-        Paragraph indicacionTexto = new Paragraph("Complete los datos y presione Comparar para ver la tasa de rendimiento.");
+        Paragraph indicacionTexto = new Paragraph(
+                "Complete los datos y presione Comparar para ver la tasa de rendimiento.");
         indicacionTexto.getStyle().set("margin", "0").set("text-align", "center");
         indicaciones.add(indicacionTexto);
 
@@ -210,11 +211,15 @@ public class TasaRendimientoView extends VerticalLayout {
     }
 
     private ResultadoTir calcularResultado() {
-        double inversionAValor = obtenerNumeroObligatorio(alternativaA.inversion(), "Alternativa A: la inversion inicial es obligatoria");
-        double inversionBValor = obtenerNumeroObligatorio(alternativaB.inversion(), "Alternativa B: la inversion inicial es obligatoria");
+        double inversionAValor = obtenerNumeroObligatorio(alternativaA.inversion(),
+                "Alternativa A: la inversion inicial es obligatoria");
+        double inversionBValor = obtenerNumeroObligatorio(alternativaB.inversion(),
+                "Alternativa B: la inversion inicial es obligatoria");
 
-        int vidaAValor = obtenerPeriodoObligatorio(alternativaA.periodos(), "Alternativa A: la vida util debe ser mayor que cero");
-        int vidaBValor = obtenerPeriodoObligatorio(alternativaB.periodos(), "Alternativa B: la vida util debe ser mayor que cero");
+        int vidaAValor = obtenerPeriodoObligatorio(alternativaA.periodos(),
+                "Alternativa A: la vida util debe ser mayor que cero");
+        int vidaBValor = obtenerPeriodoObligatorio(alternativaB.periodos(),
+                "Alternativa B: la vida util debe ser mayor que cero");
 
         if (alternativaA.flujos().size() != vidaAValor) {
             throw new IllegalArgumentException("Alternativa A: complete un flujo por cada periodo generado");
@@ -359,8 +364,10 @@ public class TasaRendimientoView extends VerticalLayout {
                 float cardHeight = 200;
                 float gap = 18;
 
-                dibujarAlternativa(contentStream, leftX, 650, "Alternativa A", resultado.alternativaA(), resultado.tirA(), new int[] { 54, 93, 173 });
-                dibujarAlternativa(contentStream, leftX + cardWidth + gap, 650, "Alternativa B", resultado.alternativaB(), resultado.tirB(), new int[] { 91, 123, 216 });
+                dibujarAlternativa(contentStream, leftX, 650, "Alternativa A", resultado.alternativaA(),
+                        resultado.tirA(), new int[] { 54, 93, 173 });
+                dibujarAlternativa(contentStream, leftX + cardWidth + gap, 650, "Alternativa B",
+                        resultado.alternativaB(), resultado.tirB(), new int[] { 91, 123, 216 });
                 dibujarResumen(contentStream, leftX, 395, 500, 110, resultado);
                 dibujarPie(contentStream, pageWidth);
             }
@@ -376,8 +383,9 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.fill();
     }
 
-    private void dibujarEncabezado(PDPageContentStream contentStream, float pageWidth, float pageHeight) throws Exception {
-        contentStream.setNonStrokingColor(rgb(123, 75, 183));
+    private void dibujarEncabezado(PDPageContentStream contentStream, float pageWidth, float pageHeight)
+            throws Exception {
+        contentStream.setNonStrokingColor(rgb(36, 64, 111));
         contentStream.addRect(0, pageHeight - 115, pageWidth, 115);
         contentStream.fill();
 
@@ -395,7 +403,8 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.endText();
     }
 
-    private void dibujarAlternativa(PDPageContentStream contentStream, float x, float y, String titulo, AlternativaTir alternativa, double tir, int[] colorBarra) throws Exception {
+    private void dibujarAlternativa(PDPageContentStream contentStream, float x, float y, String titulo,
+            AlternativaTir alternativa, double tir, int[] colorBarra) throws Exception {
         float width = 240;
         float height = 200;
 
@@ -422,8 +431,10 @@ public class TasaRendimientoView extends VerticalLayout {
         float textY = y - 48;
         float lineGap = 17;
 
-        dibujarLineaClaveValor(contentStream, textX, textY, "Inversion inicial", "$" + formatear(alternativa.inversion().getValue()));
-        dibujarLineaClaveValor(contentStream, textX, textY - lineGap, "Periodos", formatear(alternativa.periodos().getValue()) + " anos");
+        dibujarLineaClaveValor(contentStream, textX, textY, "Inversion inicial",
+                "$" + formatear(alternativa.inversion().getValue()));
+        dibujarLineaClaveValor(contentStream, textX, textY - lineGap, "Periodos",
+                formatear(alternativa.periodos().getValue()) + " años");
 
         String flujosStr = formatearFlujos(alternativa.flujos());
         if (flujosStr.length() > 20) {
@@ -436,8 +447,10 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.lineTo(x + width - 12, y - 90);
         contentStream.stroke();
 
-        dibujarLineaTexto(contentStream, textX, y - 110, "TIR:", PDType1Font.HELVETICA_BOLD, 10, rgb(71, 85, 105));
-        dibujarLineaTexto(contentStream, textX + 118, y - 110, formatear(tir) + "%", PDType1Font.HELVETICA_BOLD, 11, rgb(46, 125, 50));
+        dibujarTexto(contentStream, textX, y - 110, "TIR:", PDType1Font.HELVETICA_BOLD, 10, rgb(71, 85, 105));
+        String tirStr = Double.isNaN(tir) ? "No converge" : formatear(tir) + "%";
+        dibujarTexto(contentStream, textX + 35, y - 110, tirStr, PDType1Font.HELVETICA_BOLD, 11,
+                rgb(colorBarra[0], colorBarra[1], colorBarra[2]));
 
         contentStream.beginText();
         contentStream.setNonStrokingColor(rgb(109, 117, 130));
@@ -447,7 +460,8 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.endText();
     }
 
-    private void dibujarLineaClaveValor(PDPageContentStream contentStream, float x, float y, String etiqueta, String valor) throws Exception {
+    private void dibujarLineaClaveValor(PDPageContentStream contentStream, float x, float y, String etiqueta,
+            String valor) throws Exception {
         contentStream.beginText();
         contentStream.setNonStrokingColor(rgb(71, 85, 105));
         contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
@@ -463,7 +477,8 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.endText();
     }
 
-    private void dibujarResumen(PDPageContentStream contentStream, float x, float y, float width, float height, ResultadoTir resultado) throws Exception {
+    private void dibujarResumen(PDPageContentStream contentStream, float x, float y, float width, float height,
+            ResultadoTir resultado) throws Exception {
         contentStream.setNonStrokingColor(rgb(35, 64, 111));
         contentStream.addRect(x, y - height, width, height);
         contentStream.fill();
@@ -483,7 +498,8 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.setNonStrokingColor(rgb(15, 23, 42));
         contentStream.setFont(PDType1Font.HELVETICA_BOLD, 11);
         contentStream.newLineAtOffset(x + 16, y - 52);
-        contentStream.showText("TIR Alternativa A: " + formatear(resultado.tirA()) + "%   TIR Alternativa B: " + formatear(resultado.tirB()) + "%");
+        contentStream.showText("TIR Alternativa A: " + formatear(resultado.tirA()) + "%   TIR Alternativa B: "
+                + formatear(resultado.tirB()) + "%");
         contentStream.endText();
 
         contentStream.setNonStrokingColor(rgb(236, 241, 252));
@@ -494,7 +510,8 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.setNonStrokingColor(rgb(35, 64, 111));
         contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
         contentStream.newLineAtOffset(x + 24, y - 65);
-        contentStream.showText("Recomendacion: " + resultado.mejorAlternativa() + " es la opcion equivalente mas conveniente.");
+        contentStream.showText(
+                "Recomendacion: " + resultado.mejorAlternativa() + " es la opcion equivalente mas conveniente.");
         contentStream.endText();
     }
 
@@ -504,10 +521,12 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.lineTo(pageWidth - 50, 70);
         contentStream.stroke();
 
-        dibujarTexto(contentStream, 50, 52, "Generado por SEAE - Sistema de Evaluacion de Alternativas Economicas", PDType1Font.HELVETICA, 9, rgb(100, 116, 139));
+        dibujarTexto(contentStream, 50, 52, "Generado por SEAE - Sistema de Evaluacion de Alternativas Economicas",
+                PDType1Font.HELVETICA, 9, rgb(100, 116, 139));
     }
 
-    private void dibujarTexto(PDPageContentStream contentStream, float x, float y, String texto, PDType1Font font, int size, PDColor color) throws Exception {
+    private void dibujarTexto(PDPageContentStream contentStream, float x, float y, String texto, PDType1Font font,
+            int size, PDColor color) throws Exception {
         contentStream.beginText();
         contentStream.setNonStrokingColor(color);
         contentStream.setFont(font, size);
@@ -519,7 +538,6 @@ public class TasaRendimientoView extends VerticalLayout {
     private PDColor rgb(int red, int green, int blue) {
         return new PDColor(new float[] { red / 255f, green / 255f, blue / 255f }, PDDeviceRGB.INSTANCE);
     }
-
 
     private String formatear(double valor) {
         return String.format("%.2f", valor);
@@ -534,9 +552,11 @@ public class TasaRendimientoView extends VerticalLayout {
         return joiner.toString();
     }
 
-    private record AlternativaTir(VerticalLayout container, NumberField inversion, NumberField periodos, VerticalLayout flujosContainer, List<NumberField> flujos) {
+    private record AlternativaTir(VerticalLayout container, NumberField inversion, NumberField periodos,
+            VerticalLayout flujosContainer, List<NumberField> flujos) {
     }
 
-    private record ResultadoTir(double tirA, double tirB, String mejorAlternativa, AlternativaTir alternativaA, AlternativaTir alternativaB) {
+    private record ResultadoTir(double tirA, double tirB, String mejorAlternativa, AlternativaTir alternativaA,
+            AlternativaTir alternativaB) {
     }
 }

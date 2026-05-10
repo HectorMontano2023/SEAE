@@ -65,7 +65,8 @@ public class CostoAnualView extends VerticalLayout {
         H1 titulo = new H1("Evaluación de Alternativas Económicas: Costo Anual");
         titulo.addClassName("seae-view-title");
 
-        Paragraph subtitulo = new Paragraph("Compare dos alternativas con base en su costo anual equivalente. La opción recomendada es la de menor costo anual.");
+        Paragraph subtitulo = new Paragraph(
+                "Compare dos alternativas con base en su costo anual equivalente. La opción recomendada es la de menor costo anual.");
         subtitulo.addClassName("seae-view-subtitle");
 
         alternativaA = crearAlternativa("Alternativa A");
@@ -111,7 +112,8 @@ public class CostoAnualView extends VerticalLayout {
         indicaciones.setWidthFull();
         indicaciones.setAlignItems(Alignment.CENTER);
         indicaciones.addClassName("seae-callout-card");
-        Paragraph indicacionTexto = new Paragraph("Complete los datos y presione Calcular para ver el costo anual equivalente.");
+        Paragraph indicacionTexto = new Paragraph(
+                "Complete los datos y presione Calcular para ver el costo anual equivalente.");
         indicacionTexto.getStyle().set("margin", "0").set("text-align", "center");
         indicaciones.add(indicacionTexto);
 
@@ -155,14 +157,13 @@ public class CostoAnualView extends VerticalLayout {
         });
 
         mainContainer.add(
-            titulo,
-            subtitulo,
-            alternativas,
-            tasaLayout,
-            acciones,
-            indicaciones,
-            panelResultados
-        );
+                titulo,
+                subtitulo,
+                alternativas,
+                tasaLayout,
+                acciones,
+                indicaciones,
+                panelResultados);
 
         add(mainContainer);
     }
@@ -270,8 +271,10 @@ public class CostoAnualView extends VerticalLayout {
                 float cardHeight = 235;
                 float gap = 18;
 
-                dibujarTarjetaAlternativa(contentStream, leftX, 650, cardWidth, cardHeight, "Alternativa A", alternativaA, new int[] { 54, 93, 173 });
-                dibujarTarjetaAlternativa(contentStream, leftX + cardWidth + gap, 650, cardWidth, cardHeight, "Alternativa B", alternativaB, new int[] { 91, 123, 216 });
+                dibujarTarjetaAlternativa(contentStream, leftX, 650, cardWidth, cardHeight, "Alternativa A",
+                        alternativaA, new int[] { 54, 93, 173 });
+                dibujarTarjetaAlternativa(contentStream, leftX + cardWidth + gap, 650, cardWidth, cardHeight,
+                        "Alternativa B", alternativaB, new int[] { 91, 123, 216 });
 
                 dibujarBloqueResumen(contentStream, leftX, 360, pageWidth - 100, 130);
 
@@ -285,7 +288,8 @@ public class CostoAnualView extends VerticalLayout {
         }
     }
 
-    private void dibujarFondo(PDDocument document, PDPageContentStream contentStream, float pageWidth, float pageHeight) throws IOException {
+    private void dibujarFondo(PDDocument document, PDPageContentStream contentStream, float pageWidth, float pageHeight)
+            throws IOException {
         contentStream.setNonStrokingColor(rgb(245, 247, 252));
         contentStream.addRect(0, 0, pageWidth, pageHeight);
         contentStream.fill();
@@ -299,7 +303,8 @@ public class CostoAnualView extends VerticalLayout {
         contentStream.fill();
     }
 
-    private void dibujarEncabezado(PDPageContentStream contentStream, float pageWidth, float pageHeight) throws IOException {
+    private void dibujarEncabezado(PDPageContentStream contentStream, float pageWidth, float pageHeight)
+            throws IOException {
         contentStream.setNonStrokingColor(rgb(31, 65, 135));
         contentStream.addRect(0, pageHeight - 115, pageWidth, 115);
         contentStream.fill();
@@ -329,7 +334,8 @@ public class CostoAnualView extends VerticalLayout {
         contentStream.endText();
     }
 
-    private float dibujarTarjetaAlternativa(PDPageContentStream contentStream, float x, float y, float width, float height, String titulo, AlternativaCosto alternativa, int[] colorBarra) throws IOException {
+    private float dibujarTarjetaAlternativa(PDPageContentStream contentStream, float x, float y, float width,
+            float height, String titulo, AlternativaCosto alternativa, int[] colorBarra) throws IOException {
         contentStream.setNonStrokingColor(rgb(255, 255, 255));
         contentStream.addRect(x, y - height, width, height);
         contentStream.fill();
@@ -354,9 +360,12 @@ public class CostoAnualView extends VerticalLayout {
         float lineGap = 17;
 
         dibujarLineaClaveValor(contentStream, textX, textY, "Inversión inicial", valorMoneda(alternativa.inversion()));
-        dibujarLineaClaveValor(contentStream, textX, textY - lineGap, "Costo operativo anual", valorMoneda(alternativa.costoOperativo()));
-        dibujarLineaClaveValor(contentStream, textX, textY - (lineGap * 2), "Valor de rescate", valorMoneda(alternativa.valorRescate()));
-        dibujarLineaClaveValor(contentStream, textX, textY - (lineGap * 3), "Vida útil", valorTexto(alternativa.vidaUtil()) + " años");
+        dibujarLineaClaveValor(contentStream, textX, textY - lineGap, "Costo operativo anual",
+                valorMoneda(alternativa.costoOperativo()));
+        dibujarLineaClaveValor(contentStream, textX, textY - (lineGap * 2), "Valor de rescate",
+                valorMoneda(alternativa.valorRescate()));
+        dibujarLineaClaveValor(contentStream, textX, textY - (lineGap * 3), "Vida útil",
+                valorTexto(alternativa.vidaUtil()) + " años");
 
         contentStream.setStrokingColor(rgb(230, 235, 244));
         contentStream.moveTo(x + 12, y - 108);
@@ -373,7 +382,8 @@ public class CostoAnualView extends VerticalLayout {
         return y - height - 20;
     }
 
-    private void dibujarLineaClaveValor(PDPageContentStream contentStream, float x, float y, String etiqueta, String valor) throws IOException {
+    private void dibujarLineaClaveValor(PDPageContentStream contentStream, float x, float y, String etiqueta,
+            String valor) throws IOException {
         contentStream.beginText();
         contentStream.setNonStrokingColor(rgb(71, 85, 105));
         contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
@@ -389,7 +399,8 @@ public class CostoAnualView extends VerticalLayout {
         contentStream.endText();
     }
 
-    private void dibujarBloqueResumen(PDPageContentStream contentStream, float x, float y, float width, float height) throws IOException {
+    private void dibujarBloqueResumen(PDPageContentStream contentStream, float x, float y, float width, float height)
+            throws IOException {
         contentStream.setNonStrokingColor(rgb(31, 65, 135));
         contentStream.addRect(x, y - height, width, height);
         contentStream.fill();
@@ -428,7 +439,8 @@ public class CostoAnualView extends VerticalLayout {
         contentStream.setNonStrokingColor(rgb(15, 23, 42));
         contentStream.setFont(PDType1Font.HELVETICA_BOLD, 11);
         contentStream.newLineAtOffset(x + 16, y - 72);
-        contentStream.showText("Costo anual A: $" + formatear(resumen.costoA()) + "   Costo anual B: $" + formatear(resumen.costoB()));
+        contentStream.showText(
+                "Costo anual A: $" + formatear(resumen.costoA()) + "   Costo anual B: $" + formatear(resumen.costoB()));
         contentStream.endText();
 
         contentStream.setNonStrokingColor(rgb(236, 241, 252));
@@ -488,13 +500,14 @@ public class CostoAnualView extends VerticalLayout {
 
         double i = tasa / 100.0;
         double factorRecuperacionCapital = (i == 0)
-            ? 1 / vidaUtil
-            : (i * Math.pow(1 + i, vidaUtil)) / (Math.pow(1 + i, vidaUtil) - 1);
+                ? 1 / vidaUtil
+                : (i * Math.pow(1 + i, vidaUtil)) / (Math.pow(1 + i, vidaUtil) - 1);
         double factorFondoRecuperacion = (i == 0)
-            ? 1 / vidaUtil
-            : i / (Math.pow(1 + i, vidaUtil) - 1);
+                ? 1 / vidaUtil
+                : i / (Math.pow(1 + i, vidaUtil) - 1);
 
-        return (inversionInicial * factorRecuperacionCapital) + costoOperativo - (valorRescate * factorFondoRecuperacion);
+        return (inversionInicial * factorRecuperacionCapital) + costoOperativo
+                - (valorRescate * factorFondoRecuperacion);
     }
 
     private double valorOmitidoCero(NumberField field) {
@@ -506,11 +519,10 @@ public class CostoAnualView extends VerticalLayout {
     }
 
     private record AlternativaCosto(
-        VerticalLayout container,
-        NumberField inversion,
-        NumberField costoOperativo,
-        NumberField valorRescate,
-        NumberField vidaUtil
-    ) {
+            VerticalLayout container,
+            NumberField inversion,
+            NumberField costoOperativo,
+            NumberField valorRescate,
+            NumberField vidaUtil) {
     }
 }
