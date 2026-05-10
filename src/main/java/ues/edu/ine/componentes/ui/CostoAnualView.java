@@ -20,6 +20,8 @@ import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.Notification.Position;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
@@ -75,7 +77,7 @@ public class CostoAnualView extends VerticalLayout {
         tasaLayout.setWidth("100%");
         tasaLayout.setAlignItems(Alignment.CENTER);
         tasaLayout.setJustifyContentMode(JustifyContentMode.CENTER);
-        tasaLayout.addClassName("seae-result-card");
+        tasaLayout.addClassName("seae-callout-card");
 
         tasaDescuentoField.setPlaceholder("Ingrese el porcentaje");
         tasaDescuentoField.setMin(0);
@@ -90,35 +92,41 @@ public class CostoAnualView extends VerticalLayout {
 
         Button calcular = new Button("Calcular");
         estiloBoton(calcular);
+        Button exportar = new Button("Exportar PDF");
+        estiloBoton(exportar);
+        exportar.setEnabled(false);
+        exportar.setEnabled(false);
 
         calcular.addClickListener(event -> {
-            mostrarResultado(calcularResultados());
+            ResultadoComparacion resultadoCalculado = calcularResultados();
+            if (!mostrarResultado(resultadoCalculado)) {
+                exportar.setEnabled(false);
+                return;
+            }
+
+            exportar.setEnabled(true);
+            Notification.show("Cálculo realizado", 3000, Position.MIDDLE);
         });
 
         Anchor descargaPdf = new Anchor();
-        descargaPdf.getElement().setAttribute("download", true);
+        descargaPdf.getElement().setAttribute("download", "reporte_costo_anual.pdf");
         descargaPdf.getStyle().set("display", "none");
 
-        Button exportar = new Button("Exportar PDF", event -> {
-            if (!mostrarResultado(calcularResultados())) {
+        exportar.addClickListener(event -> {
+            if (ultimoResultado == null) {
+                Notification.show("Primero realice un cálculo válido antes de exportar.");
                 return;
             }
 
             descargaPdf.setHref(crearUrlPdf());
             descargaPdf.getElement().executeJs("this.click()");
         });
-        estiloBoton(exportar);
 
         HorizontalLayout acciones = new HorizontalLayout(calcular, exportar);
         acciones.setSpacing(true);
 
         VerticalLayout resultadoCard = new VerticalLayout();
-        resultadoCard.getStyle()
-            .set("background-color", "#eef2ff")
-            .set("border-radius", "18px")
-            .set("padding", "18px")
-            .set("width", "100%")
-            .set("max-width", "900px");
+        resultadoCard.addClassName("seae-result-card");
         resultadoCard.add(resultado);
 
         mainContainer.add(
@@ -236,12 +244,11 @@ public class CostoAnualView extends VerticalLayout {
                 dibujarEncabezado(contentStream, pageWidth, pageHeight);
 
                 float leftX = 50;
-                float topY = 650;
                 float cardWidth = 240;
                 float cardHeight = 235;
                 float gap = 18;
 
-                topY = dibujarTarjetaAlternativa(contentStream, leftX, topY, cardWidth, cardHeight, "Alternativa A", alternativaA, new int[] { 54, 93, 173 });
+                dibujarTarjetaAlternativa(contentStream, leftX, 650, cardWidth, cardHeight, "Alternativa A", alternativaA, new int[] { 54, 93, 173 });
                 dibujarTarjetaAlternativa(contentStream, leftX + cardWidth + gap, 650, cardWidth, cardHeight, "Alternativa B", alternativaB, new int[] { 91, 123, 216 });
 
                 dibujarBloqueResumen(contentStream, leftX, 360, pageWidth - 100, 130);

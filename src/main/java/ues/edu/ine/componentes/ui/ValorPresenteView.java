@@ -75,7 +75,7 @@ public class ValorPresenteView extends VerticalLayout {
         tasaLayout.setWidth("100%");
         tasaLayout.setAlignItems(Alignment.CENTER);
         tasaLayout.setJustifyContentMode(JustifyContentMode.CENTER);
-        tasaLayout.getStyle().set("background-color", "#eef2ff").set("padding", "20px").set("border-radius", "15px");
+        tasaLayout.addClassName("seae-callout-card");
 
         tasaDescuento = new NumberField();
         tasaDescuento.setPlaceholder("Ingrese el porcentaje");
@@ -89,13 +89,13 @@ public class ValorPresenteView extends VerticalLayout {
         tasaLayout.add(tasaLabel, tasaDescuento);
 
         Button comparar = new Button("Comparar");
-        Button exportar = new Button("Exportar Reporte (PDF)");
+        Button exportar = new Button("Exportar PDF");
         estiloBoton(comparar);
         estiloBoton(exportar);
         exportar.setEnabled(false);
 
         Anchor descargaPdf = new Anchor();
-        descargaPdf.getElement().setAttribute("download", true);
+        descargaPdf.getElement().setAttribute("download", "reporte_valor_presente.pdf");
         descargaPdf.getStyle().set("display", "none");
 
         comparar.addClickListener(event -> {

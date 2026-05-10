@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.button.Button;
@@ -17,7 +18,6 @@ import com.vaadin.flow.component.notification.Notification.Position;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
-import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -61,7 +61,7 @@ public class TasaRendimientoView extends VerticalLayout {
         mainContainer.setAlignItems(Alignment.CENTER);
         mainContainer.addClassName("seae-surface");
 
-        H1 titulo = new H1("Comparacion de Tasa de Rendimiento");
+        H1 titulo = new H1("Evaluacion de Alternativas Economicas: Tasa de Rendimiento");
         titulo.addClassName("seae-view-title");
 
         Paragraph subtitulo = new Paragraph("Compare dos alternativas usando la TIR.");
@@ -83,7 +83,7 @@ public class TasaRendimientoView extends VerticalLayout {
         exportar.setEnabled(false);
 
         Anchor descargaPdf = new Anchor();
-        descargaPdf.getElement().setAttribute("download", true);
+        descargaPdf.getElement().setAttribute("download", "reporte_tir.pdf");
         descargaPdf.getStyle().set("display", "none");
 
         HorizontalLayout botones = new HorizontalLayout(calcular, exportar);
@@ -95,6 +95,15 @@ public class TasaRendimientoView extends VerticalLayout {
         panelResultados.setAlignItems(Alignment.CENTER);
         panelResultados.setVisible(false);
         panelResultados.addClassName("seae-result-card");
+
+        VerticalLayout indicaciones = new VerticalLayout();
+        indicaciones.setWidthFull();
+        indicaciones.setAlignItems(Alignment.CENTER);
+        indicaciones.addClassName("seae-callout-card");
+
+        Paragraph indicacionTexto = new Paragraph("Complete los datos y presione Comparar para ver la tasa de rendimiento.");
+        indicacionTexto.getStyle().set("margin", "0").set("text-align", "center");
+        indicaciones.add(indicacionTexto);
 
         H2 tituloResultados = new H2("Resultados");
         tituloResultados.getStyle().set("color", "#23406f");
@@ -144,7 +153,7 @@ public class TasaRendimientoView extends VerticalLayout {
             }
         });
 
-        mainContainer.add(titulo, subtitulo, alternativas, botones, panelResultados);
+        mainContainer.add(titulo, subtitulo, alternativas, botones, indicaciones, panelResultados);
         mainContainer.add(descargaPdf);
         add(mainContainer);
     }
@@ -164,18 +173,23 @@ public class TasaRendimientoView extends VerticalLayout {
         inversion.setPlaceholder("Ingrese la inversion inicial");
         inversion.setWidthFull();
 
-        TextField flujo = new TextField("Flujos de efectivo");
-        flujo.setPlaceholder("Separe los flujos por comas");
-        flujo.setWidthFull();
+        NumberField periodos = new NumberField("Numero de periodos (n)");
+        periodos.setPlaceholder("Ingrese el numero de periodos");
+        periodos.setWidthFull();
+        periodos.setMin(1);
+        periodos.setStep(1);
 
-        NumberField vida = new NumberField("Vida util (anos)");
-        vida.setPlaceholder("Ingrese la vida util");
-        vida.setWidthFull();
-        vida.setMin(1);
-        vida.setStep(1);
+        VerticalLayout flujosContainer = new VerticalLayout();
+        flujosContainer.setWidthFull();
+        flujosContainer.setSpacing(true);
+        flujosContainer.setPadding(false);
 
-        card.add(inversion, flujo, vida);
-        return new AlternativaTir(card, inversion, flujo, vida);
+        AlternativaTir alternativa = new AlternativaTir(card, inversion, periodos, flujosContainer, new ArrayList<>());
+        periodos.addValueChangeListener(event -> actualizarCamposFlujo(alternativa, event.getValue()));
+        actualizarCamposFlujo(alternativa, null);
+
+        card.add(inversion, periodos, flujosContainer);
+        return alternativa;
     }
 
     private VerticalLayout crearCardBase(String tituloTexto) {
@@ -202,19 +216,19 @@ public class TasaRendimientoView extends VerticalLayout {
         double inversionAValor = obtenerNumeroObligatorio(alternativaA.inversion(), "Alternativa A: la inversion inicial es obligatoria");
         double inversionBValor = obtenerNumeroObligatorio(alternativaB.inversion(), "Alternativa B: la inversion inicial es obligatoria");
 
-        double[] flujosA = parseFlujos(alternativaA);
-        double[] flujosB = parseFlujos(alternativaB);
-
         int vidaAValor = obtenerPeriodoObligatorio(alternativaA.vida(), "Alternativa A: la vida util debe ser mayor que cero");
         int vidaBValor = obtenerPeriodoObligatorio(alternativaB.vida(), "Alternativa B: la vida util debe ser mayor que cero");
 
-        if (flujosA.length != vidaAValor) {
-            throw new IllegalArgumentException("Alternativa A: la cantidad de flujos debe coincidir con la vida util");
+        if (alternativaA.flujos().size() != vidaAValor) {
+            throw new IllegalArgumentException("Alternativa A: complete un flujo por cada periodo generado");
         }
 
-        if (flujosB.length != vidaBValor) {
-            throw new IllegalArgumentException("Alternativa B: la cantidad de flujos debe coincidir con la vida util");
+        if (alternativaB.flujos().size() != vidaBValor) {
+            throw new IllegalArgumentException("Alternativa B: complete un flujo por cada periodo generado");
         }
+
+        double[] flujosA = parseFlujos(alternativaA);
+        double[] flujosB = parseFlujos(alternativaB);
 
         double tirAValor = calcularTIR(inversionAValor, flujosA);
         double tirBValor = calcularTIR(inversionBValor, flujosB);
@@ -239,29 +253,52 @@ public class TasaRendimientoView extends VerticalLayout {
     }
 
     private double[] parseFlujos(AlternativaTir alternativa) {
-        String texto = alternativa.flujos().getValue();
-        if (texto == null || texto.isBlank()) {
-            throw new IllegalArgumentException("Complete los flujos de efectivo de ambas alternativas");
+        List<NumberField> campos = alternativa.flujos();
+        if (campos.isEmpty()) {
+            throw new IllegalArgumentException("Indique el numero de periodos antes de calcular");
         }
 
-        String[] valores = texto.split(",");
-        List<Double> flujos = new ArrayList<>(valores.length);
-
-        for (String valor : valores) {
-            String limpio = valor.trim();
-            if (limpio.isEmpty()) {
-                throw new IllegalArgumentException("No deje flujos vacios en la lista de valores");
+        double[] flujos = new double[campos.size()];
+        for (int i = 0; i < campos.size(); i++) {
+            NumberField campo = campos.get(i);
+            if (campo.isEmpty() || campo.getValue() == null || !Double.isFinite(campo.getValue())) {
+                throw new IllegalArgumentException("Complete los flujos de efectivo de todos los periodos");
             }
 
-            flujos.add(Double.parseDouble(limpio));
+            flujos[i] = campo.getValue();
         }
 
-        double[] arreglo = new double[flujos.size()];
-        for (int i = 0; i < flujos.size(); i++) {
-            arreglo[i] = flujos.get(i);
+        return flujos;
+    }
+
+    private void actualizarCamposFlujo(AlternativaTir alternativa, Double valorPeriodos) {
+        alternativa.flujos().clear();
+        alternativa.flujosContainer().removeAll();
+
+        if (valorPeriodos == null || !Double.isFinite(valorPeriodos) || valorPeriodos < 1) {
+            Paragraph indicacion = new Paragraph("Indique el numero de periodos para generar los flujos de efectivo.");
+            indicacion.getStyle().set("margin", "0").set("color", "#4b5563");
+            alternativa.flujosContainer().add(indicacion);
+            return;
         }
 
-        return arreglo;
+        int periodos = (int) Math.round(valorPeriodos);
+        if (Math.abs(periodos - valorPeriodos) > 0.00001) {
+            Paragraph indicacion = new Paragraph("El numero de periodos debe ser entero.");
+            indicacion.getStyle().set("margin", "0").set("color", "#4b5563");
+            alternativa.flujosContainer().add(indicacion);
+            return;
+        }
+
+        for (int periodo = 1; periodo <= periodos; periodo++) {
+            NumberField flujo = new NumberField("Flujo F" + periodo);
+            flujo.setPlaceholder("Ingrese F" + periodo);
+            flujo.setWidthFull();
+            flujo.setStep(0.01);
+            flujo.setMin(-999999999);
+            alternativa.flujos().add(flujo);
+            alternativa.flujosContainer().add(flujo);
+        }
     }
 
     private int obtenerPeriodoObligatorio(NumberField field, String mensajeError) {
@@ -378,8 +415,8 @@ public class TasaRendimientoView extends VerticalLayout {
 
         dibujarTexto(contentStream, x + 12, y - 16, titulo, PDType1Font.HELVETICA_BOLD, 12, rgb(255, 255, 255));
         dibujarTexto(contentStream, x + 12, y - 50, "Inversion inicial: $" + formatear(alternativa.inversion().getValue()), PDType1Font.HELVETICA, 10, rgb(15, 23, 42));
-        dibujarTexto(contentStream, x + 12, y - 70, "Flujos: " + alternativa.flujos().getValue(), PDType1Font.HELVETICA, 10, rgb(15, 23, 42));
-        dibujarTexto(contentStream, x + 12, y - 90, "Vida util: " + formatear(alternativa.vida().getValue()) + " anos", PDType1Font.HELVETICA, 10, rgb(15, 23, 42));
+        dibujarTexto(contentStream, x + 12, y - 70, "Periodos: " + formatear(alternativa.periodos().getValue()) + " anos", PDType1Font.HELVETICA, 10, rgb(15, 23, 42));
+        dibujarTexto(contentStream, x + 12, y - 90, "Flujos: " + formatearFlujos(alternativa.flujos()), PDType1Font.HELVETICA, 10, rgb(15, 23, 42));
         dibujarTexto(contentStream, x + 12, y - 120, "TIR: " + formatear(tir) + "%", PDType1Font.HELVETICA_BOLD, 11, rgb(46, 125, 50));
     }
 
@@ -426,7 +463,16 @@ public class TasaRendimientoView extends VerticalLayout {
         return String.format("%.2f", valor);
     }
 
-    private record AlternativaTir(VerticalLayout container, NumberField inversion, TextField flujos, NumberField vida) {
+    private String formatearFlujos(List<NumberField> flujos) {
+        StringJoiner joiner = new StringJoiner(", ");
+        for (NumberField flujo : flujos) {
+            joiner.add(flujo.isEmpty() ? "" : formatear(flujo.getValue()));
+        }
+
+        return joiner.toString();
+    }
+
+    private record AlternativaTir(VerticalLayout container, NumberField inversion, NumberField periodos, VerticalLayout flujosContainer, List<NumberField> flujos) {
     }
 
     private record ResultadoTir(double tirA, double tirB, String mejorAlternativa, AlternativaTir alternativaA, AlternativaTir alternativaB) {
