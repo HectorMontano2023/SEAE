@@ -1,5 +1,3 @@
-/* Add your styles here */
-
 .app-logo {
     border-radius: min(40%, var(--vaadin-radius-m));
     margin-inline-start: var(--vaadin-padding-inline-container);
@@ -10,12 +8,103 @@
     font-size: var(--aura-font-size-l);
 }
 
+.app-header {
+    background: rgba(255, 255, 255, 0.92);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(12px);
+}
+
 .app-footer {
     color: var(--vaadin-text-color-secondary);
     font-size: var(--aura-font-size-s);
 }
 
-/* TODO: This is only for demo purposes. You can delete it. */
+.seae-page {
+    min-height: 100%;
+    padding: 20px;
+    background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.45), transparent 28%),
+        linear-gradient(135deg, #f6f8fc 0%, #e9eefb 100%);
+}
+
+.seae-surface {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 25px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    padding: 35px;
+}
+
+.seae-view-title {
+    margin: 0 auto 0;
+    color: #1f2937;
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: 800;
+    line-height: 1.05;
+    text-align: center;
+    max-width: 20ch;
+    text-wrap: balance;
+}
+
+.seae-view-subtitle {
+    color: #4b5563;
+    text-align: center;
+    max-width: 900px;
+}
+
+.seae-callout-card {
+    background-color: #eef2ff;
+    border-radius: 15px;
+    padding: 20px;
+    width: 100%;
+}
+
+.seae-card {
+    background-color: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+}
+
+.seae-card-title {
+    color: #23406f;
+    border-left: 4px solid #5a7bd8;
+    padding-left: 12px;
+    margin-bottom: 10px;
+}
+
+.seae-actions {
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.seae-primary-button {
+    background: linear-gradient(90deg, #23406f, #5a7bd8);
+    color: white;
+    border-radius: 25px;
+    padding: 12px 28px;
+    font-weight: bold;
+    border: none;
+    box-shadow: 0 10px 20px rgba(36, 64, 111, 0.18);
+}
+
+.seae-result-card {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 18px;
+    padding: 18px;
+    width: 100%;
+    max-width: 900px;
+}
+
+.seae-result-value {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.seae-result-highlight {
+    color: #2e7d32;
+}
+
 vaadin-side-nav:has(vaadin-side-nav-item:only-child)::after {
     display: block;
     content: "More menu items will appear here when you add more views.";

@@ -1,10 +1,17 @@
 package ues.edu.ine.componentes.ui;
 
-import com.lowagie.text.Document;
-import com.lowagie.text.pdf.PdfWriter;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.StringJoiner;
 
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
@@ -12,792 +19,544 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.Notification.Position;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
-import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import com.vaadin.flow.component.textfield.NumberField;
-import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.VaadinSession;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
 
 import ues.edu.ine.base.ui.MainLayout;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 
 @Route(value = "tasa-rendimiento", layout = MainLayout.class)
 @PageTitle("Tasa de Rendimiento | SEAE")
 @Menu(order = 2, icon = "vaadin:chart", title = "Tasa de Rendimiento")
-
 public class TasaRendimientoView extends VerticalLayout {
 
-    // Alternativa A
-    private NumberField inversionA;
-    private TextField flujoA;
-    private NumberField vidaA;
-
-    // Alternativa B
-    private NumberField inversionB;
-    private TextField flujoB;
-    private NumberField vidaB;
-
-    // Resultados
-    private Paragraph resultadoA;
-    private Paragraph resultadoB;
-    private Paragraph mejorResultado;
-
-    private double tirA = 0;
-    private double tirB = 0;
-
-    private String mejorAlternativa = "";
+    private AlternativaTir alternativaA;
+    private AlternativaTir alternativaB;
+    private final Paragraph resultadoA = new Paragraph("TIR Alternativa A: --");
+    private final Paragraph resultadoB = new Paragraph("TIR Alternativa B: --");
+    private final Paragraph mejorResultado = new Paragraph("Mejor alternativa: --");
+    private ResultadoTir ultimoResultado;
 
     public TasaRendimientoView() {
-
         setWidthFull();
-
         setAlignItems(Alignment.CENTER);
-
-        setJustifyContentMode(
-            JustifyContentMode.START
-        );
-
+        setJustifyContentMode(JustifyContentMode.START);
         setPadding(true);
-
         setSpacing(true);
+        addClassName("seae-page");
 
-        getStyle()
-            .set("padding", "30px");
-
-        // CONTENEDOR PRINCIPAL
-        VerticalLayout mainContainer =
-            new VerticalLayout();
-
+        VerticalLayout mainContainer = new VerticalLayout();
         mainContainer.setWidthFull();
-
         mainContainer.setMaxWidth("1150px");
-
         mainContainer.setPadding(true);
-
         mainContainer.setSpacing(true);
+        mainContainer.setAlignItems(Alignment.CENTER);
+        mainContainer.addClassName("seae-surface");
 
-        mainContainer.setAlignItems(
-            Alignment.CENTER
-        );
+        H1 titulo = new H1("Evaluacion de Alternativas Economicas: Tasa de Rendimiento");
+        titulo.addClassName("seae-view-title");
 
-        // TITULO
-        H1 titulo = new H1(
-            "Comparación de Tasa de Rendimiento"
-        );
+        Paragraph subtitulo = new Paragraph("Compare dos alternativas usando la TIR.");
+        subtitulo.addClassName("seae-view-subtitle");
 
-        titulo.getStyle()
-            .set("color", "#2c2c2c")
-            .set("margin-bottom", "0");
+        alternativaA = crearAlternativa("Alternativa A");
+        alternativaB = crearAlternativa("Alternativa B");
 
-        Paragraph subtitulo =
-            new Paragraph(
-                "Compare dos alternativas usando la TIR."
-            );
-
-        subtitulo.getStyle()
-            .set("color", "#666")
-            .set("margin-top", "0");
-
-        // CARDS
-        VerticalLayout cardA =
-            crearAlternativaA();
-
-        VerticalLayout cardB =
-            crearAlternativaB();
-
-        HorizontalLayout alternativas =
-            new HorizontalLayout(
-                cardA,
-                cardB
-            );
-
+        HorizontalLayout alternativas = new HorizontalLayout(alternativaA.container(), alternativaB.container());
         alternativas.setWidthFull();
-
         alternativas.setSpacing(true);
-
         alternativas.setWrap(true);
+        alternativas.setJustifyContentMode(JustifyContentMode.CENTER);
 
-        alternativas.setJustifyContentMode(
-            JustifyContentMode.CENTER
-        );
-
-        // BOTONES
-        Button calcular =
-            new Button("Comparar");
-
-        Button exportar =
-            new Button("Exportar PDF");
-
+        Button calcular = new Button("Comparar");
+        Button exportarBtn = new Button("Exportar PDF");
         estiloBoton(calcular);
+        estiloBoton(exportarBtn);
+        exportarBtn.setEnabled(false);
 
-        estiloBoton(exportar);
+        Anchor exportarAnchor = new Anchor();
+        exportarAnchor.getElement().setAttribute("download", "reporte_tir.pdf");
+        exportarAnchor.add(exportarBtn);
 
-        HorizontalLayout botones =
-            new HorizontalLayout(
-                calcular,
-                exportar
-            );
+        HorizontalLayout botones = new HorizontalLayout(calcular, exportarAnchor);
+        botones.addClassName("seae-actions");
 
-        botones.setSpacing(true);
-
-        // PANEL RESULTADOS
-        VerticalLayout panelResultados =
-            new VerticalLayout();
-
+        VerticalLayout panelResultados = new VerticalLayout();
         panelResultados.setWidthFull();
-
         panelResultados.setMaxWidth("750px");
-
-        panelResultados.setAlignItems(
-            Alignment.CENTER
-        );
-
+        panelResultados.setAlignItems(Alignment.CENTER);
         panelResultados.setVisible(false);
+        panelResultados.addClassName("seae-result-card");
 
-        panelResultados.getStyle()
-            .set("background-color", "#ffffff")
-            .set("border-radius", "20px")
-            .set("padding", "30px")
-            .set("margin-top", "25px")
-            .set(
-                "box-shadow",
-                "0 4px 12px rgba(0,0,0,0.1)"
-            );
+        VerticalLayout indicaciones = new VerticalLayout();
+        indicaciones.setWidthFull();
+        indicaciones.setAlignItems(Alignment.CENTER);
+        indicaciones.addClassName("seae-callout-card");
 
-        H2 tituloResultados =
-            new H2("Resultados");
+        Paragraph indicacionTexto = new Paragraph(
+                "Complete los datos y presione Comparar para ver la tasa de rendimiento.");
+        indicacionTexto.getStyle().set("margin", "0").set("text-align", "center");
+        indicaciones.add(indicacionTexto);
 
-        tituloResultados.getStyle()
-            .set("color", "#7b4bb7");
+        H2 tituloResultados = new H2("Resultados");
+        tituloResultados.getStyle().set("color", "#23406f");
 
-        resultadoA =
-            new Paragraph(
-                "TIR Alternativa A:"
-            );
+        resultadoA.addClassName("seae-result-value");
+        resultadoB.addClassName("seae-result-value");
+        mejorResultado.addClassName("seae-result-value");
+        mejorResultado.addClassName("seae-result-highlight");
 
-        resultadoB =
-            new Paragraph(
-                "TIR Alternativa B:"
-            );
+        panelResultados.add(tituloResultados, resultadoA, resultadoB, mejorResultado);
 
-        mejorResultado =
-            new Paragraph(
-                "Mejor alternativa:"
-            );
-
-        resultadoA.getStyle()
-            .set("font-size", "18px")
-            .set("font-weight", "bold");
-
-        resultadoB.getStyle()
-            .set("font-size", "18px")
-            .set("font-weight", "bold");
-
-        mejorResultado.getStyle()
-            .set("font-size", "20px")
-            .set("font-weight", "bold")
-            .set("color", "#2e7d32");
-
-        panelResultados.add(
-            tituloResultados,
-            resultadoA,
-            resultadoB,
-            mejorResultado
-        );
-
-        // EVENTO CALCULAR
         calcular.addClickListener(event -> {
-
             try {
-
-                tirA = calcularTIR(
-                    inversionA.getValue(),
-                    flujoA.getValue()
-                );
-
-                tirB = calcularTIR(
-                    inversionB.getValue(),
-                    flujoB.getValue()
-                );
-
-                if (tirA > tirB) {
-
-                    mejorAlternativa =
-                        "Alternativa A";
-
-                } else if (tirB > tirA) {
-
-                    mejorAlternativa =
-                        "Alternativa B";
-
-                } else {
-
-                    mejorAlternativa =
-                        "Ambas son iguales";
+                ResultadoTir resultado = calcularResultado();
+                if (resultado == null) {
+                    ultimoResultado = null;
+                    panelResultados.setVisible(false);
+                    indicaciones.setVisible(true);
+                    Notification.show("Complete correctamente los datos de ambas alternativas");
+                    return;
                 }
 
-                resultadoA.setText(
-                    "TIR Alternativa A: "
-                    + String.format(
-                        "%.2f",
-                        tirA
-                    )
-                    + "%"
-                );
-
-                resultadoB.setText(
-                    "TIR Alternativa B: "
-                    + String.format(
-                        "%.2f",
-                        tirB
-                    )
-                    + "%"
-                );
-
-                mejorResultado.setText(
-                    "Mejor alternativa: "
-                    + mejorAlternativa
-                );
-
-                panelResultados.setVisible(
-                    true
-                );
-
-                Notification.show(
-                    "Comparación realizada",
-                    4000,
-                    Position.MIDDLE
-                );
-
-            } catch (Exception ex) {
-
-                Notification.show(
-                    "Ingrese correctamente los datos"
-                );
+                mostrarResultado(resultado);
+                panelResultados.setVisible(true);
+                indicaciones.setVisible(false);
+                exportarBtn.setEnabled(true);
+                exportarAnchor.setHref(new StreamResource("reporte_tir.pdf", () -> {
+                    try {
+                        return new ByteArrayInputStream(generarPDF(resultado));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return new ByteArrayInputStream(new byte[0]);
+                    }
+                }));
+                Notification.show("Comparacion realizada", 3000, Position.MIDDLE);
+            } catch (IllegalArgumentException ex) {
+                ultimoResultado = null;
+                panelResultados.setVisible(false);
+                indicaciones.setVisible(true);
+                exportarBtn.setEnabled(false);
+                exportarAnchor.removeHref();
+                Notification.show(ex.getMessage(), 4500, Position.MIDDLE);
             }
         });
 
-        // EXPORTAR PDF
-        exportar.addClickListener(event -> {
-
-            try {
-
-                StreamResource resource =
-                    generarPDF();
-
-                getUI().ifPresent(ui -> {
-
-                    String url =
-                        resourceRegistry(
-                            resource
-                        );
-
-                    ui.getPage().open(
-                        url,
-                        "_blank"
-                    );
-                });
-
-            } catch (Exception ex) {
-
-                Notification.show(
-                    "Error al generar PDF"
-                );
-            }
-        });
-
-        mainContainer.add(
-            titulo,
-            subtitulo,
-            alternativas,
-            botones,
-            panelResultados
-        );
-
+        mainContainer.add(titulo, subtitulo, alternativas, botones, indicaciones, panelResultados);
         add(mainContainer);
     }
 
     @Override
-    protected void onAttach(
-        AttachEvent attachEvent
-    ) {
-
-        Object user =
-            VaadinSession.getCurrent()
-                .getAttribute("user");
-
+    protected void onAttach(AttachEvent attachEvent) {
+        Object user = VaadinSession.getCurrent().getAttribute("user");
         if (user == null) {
-
-            attachEvent.getUI()
-                .navigate("login");
+            attachEvent.getUI().navigate("login");
         }
     }
 
-   // ALTERNATIVA A
-private VerticalLayout crearAlternativaA() {
+    private AlternativaTir crearAlternativa(String tituloTexto) {
+        VerticalLayout card = crearCardBase(tituloTexto);
 
-    VerticalLayout card =
-        crearCardBase(
-            "Alternativa A"
-        );
+        NumberField inversion = new NumberField("Inversion inicial");
+        inversion.setPlaceholder("Ingrese la inversion inicial");
+        inversion.setWidthFull();
 
-    inversionA =
-        new NumberField(
-            "Inversión Inicial"
-        );
+        NumberField periodos = new NumberField("Numero de periodos (n)");
+        periodos.setPlaceholder("Ingrese el numero de periodos");
+        periodos.setWidthFull();
+        periodos.setMin(1);
+        periodos.setStep(1);
 
-    inversionA.setPlaceholder(
-        "Ingrese la inversión inicial"
-    );
+        VerticalLayout flujosContainer = new VerticalLayout();
+        flujosContainer.setWidthFull();
+        flujosContainer.setSpacing(true);
+        flujosContainer.setPadding(false);
 
-    flujoA =
-        new TextField(
-            "Flujos de efectivo"
-        );
+        AlternativaTir alternativa = new AlternativaTir(card, inversion, periodos, flujosContainer, new ArrayList<>());
+        periodos.addValueChangeListener(event -> actualizarCamposFlujo(alternativa, event.getValue()));
+        actualizarCamposFlujo(alternativa, null);
 
-    flujoA.setPlaceholder(
-        "Separe los flujos por comas"
-    );
+        card.add(inversion, periodos, flujosContainer);
+        return alternativa;
+    }
 
-    vidaA =
-        new NumberField(
-            "Vida útil (años)"
-        );
-
-    vidaA.setPlaceholder(
-        "Ingrese la vida útil"
-    );
-
-    card.add(
-        inversionA,
-        flujoA,
-        vidaA
-    );
-
-    return card;
-}
-
-// ALTERNATIVA B
-private VerticalLayout crearAlternativaB() {
-
-    VerticalLayout card =
-        crearCardBase(
-            "Alternativa B"
-        );
-
-    inversionB =
-        new NumberField(
-            "Inversión Inicial"
-        );
-
-    inversionB.setPlaceholder(
-        "Ingrese la inversión inicial"
-    );
-
-    flujoB =
-        new TextField(
-            "Flujos de efectivo"
-        );
-
-    flujoB.setPlaceholder(
-        "Separe los flujos por comas"
-    );
-
-    vidaB =
-        new NumberField(
-            "Vida útil (años)"
-        );
-
-    vidaB.setPlaceholder(
-        "Ingrese la vida útil"
-    );
-
-    card.add(
-        inversionB,
-        flujoB,
-        vidaB
-    );
-
-    return card;
-}
-
-    // CARD BASE
-    private VerticalLayout crearCardBase(
-        String tituloTexto
-    ) {
-
-        VerticalLayout card =
-            new VerticalLayout();
-
+    private VerticalLayout crearCardBase(String tituloTexto) {
+        VerticalLayout card = new VerticalLayout();
         card.setWidth("100%");
-
         card.setMaxWidth("450px");
-
         card.setPadding(true);
-
         card.setSpacing(true);
+        card.addClassName("seae-card");
 
-        card.getStyle()
-            .set(
-                "background-color",
-                "#f5f5f5"
-            )
-            .set(
-                "border-radius",
-                "18px"
-            )
-            .set(
-                "padding",
-                "25px"
-            )
-            .set(
-                "box-shadow",
-                "0 3px 10px rgba(0,0,0,0.08)"
-            );
-
-        H2 titulo =
-            new H2(tituloTexto);
-
-        titulo.getStyle()
-            .set(
-                "color",
-                "#7b4bb7"
-            )
-            .set(
-                "font-weight",
-                "bold"
-            )
-            .set(
-                "border-left",
-                "5px solid #7b4bb7"
-            )
-            .set(
-                "padding-left",
-                "12px"
-            )
-            .set(
-                "margin-bottom",
-                "10px"
-            );
+        H2 titulo = new H2(tituloTexto);
+        titulo.addClassName("seae-card-title");
 
         card.add(titulo);
-
         return card;
     }
 
-    // ESTILO BOTON
-    private void estiloBoton(
-        Button boton
-    ) {
-
-        boton.getStyle()
-            .set(
-                "background",
-                "#7b4bb7"
-            )
-            .set("color", "white")
-            .set(
-                "border-radius",
-                "25px"
-            )
-            .set(
-                "padding",
-                "12px 28px"
-            )
-            .set(
-                "font-weight",
-                "bold"
-            )
-            .set("border", "none");
+    private void estiloBoton(Button boton) {
+        boton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        boton.addClassName("seae-primary-button");
     }
 
-    // CALCULAR TIR
-    private double calcularTIR(
-        double inversionInicial,
-        String flujosTexto
-    ) {
+    private ResultadoTir calcularResultado() {
+        double inversionAValor = obtenerNumeroObligatorio(alternativaA.inversion(),
+                "Alternativa A: la inversion inicial es obligatoria");
+        double inversionBValor = obtenerNumeroObligatorio(alternativaB.inversion(),
+                "Alternativa B: la inversion inicial es obligatoria");
 
-        String[] valores =
-            flujosTexto.split(",");
+        int vidaAValor = obtenerPeriodoObligatorio(alternativaA.periodos(),
+                "Alternativa A: la vida util debe ser mayor que cero");
+        int vidaBValor = obtenerPeriodoObligatorio(alternativaB.periodos(),
+                "Alternativa B: la vida util debe ser mayor que cero");
 
-        double[] flujos =
-            new double[valores.length];
-
-        for (
-            int i = 0;
-            i < valores.length;
-            i++
-        ) {
-
-            flujos[i] =
-                Double.parseDouble(
-                    valores[i].trim()
-                );
+        if (alternativaA.flujos().size() != vidaAValor) {
+            throw new IllegalArgumentException("Alternativa A: complete un flujo por cada periodo generado");
         }
 
-        double tir = 0.1;
+        if (alternativaB.flujos().size() != vidaBValor) {
+            throw new IllegalArgumentException("Alternativa B: complete un flujo por cada periodo generado");
+        }
 
-        for (
-            int iteracion = 0;
-            iteracion < 1000;
-            iteracion++
-        ) {
+        double[] flujosA = parseFlujos(alternativaA);
+        double[] flujosB = parseFlujos(alternativaB);
 
-            double vpn =
-                -inversionInicial;
+        double tirAValor = calcularTIR(inversionAValor, flujosA);
+        double tirBValor = calcularTIR(inversionBValor, flujosB);
 
-            double derivada = 0;
+        String mejor;
+        if (tirAValor > tirBValor) {
+            mejor = "Alternativa A";
+        } else if (tirBValor > tirAValor) {
+            mejor = "Alternativa B";
+        } else {
+            mejor = "Ambas son iguales";
+        }
 
-            for (
-                int t = 0;
-                t < flujos.length;
-                t++
-            ) {
+        return new ResultadoTir(tirAValor, tirBValor, mejor, alternativaA, alternativaB);
+    }
 
-                vpn +=
-                    flujos[t] /
-                    Math.pow(
-                        1 + tir,
-                        t + 1
-                    );
+    private void mostrarResultado(ResultadoTir resultado) {
+        ultimoResultado = resultado;
+        resultadoA.setText("TIR Alternativa A: " + formatear(resultado.tirA()) + "%");
+        resultadoB.setText("TIR Alternativa B: " + formatear(resultado.tirB()) + "%");
+        mejorResultado.setText("Mejor alternativa: " + resultado.mejorAlternativa());
+    }
 
-                derivada -=
-                    (t + 1)
-                    * flujos[t] /
-                    Math.pow(
-                        1 + tir,
-                        t + 2
-                    );
+    private double[] parseFlujos(AlternativaTir alternativa) {
+        List<NumberField> campos = alternativa.flujos();
+        if (campos.isEmpty()) {
+            throw new IllegalArgumentException("Indique el numero de periodos antes de calcular");
+        }
+
+        double[] flujos = new double[campos.size()];
+        for (int i = 0; i < campos.size(); i++) {
+            NumberField campo = campos.get(i);
+            if (campo.isEmpty() || campo.getValue() == null || !Double.isFinite(campo.getValue())) {
+                throw new IllegalArgumentException("Complete los flujos de efectivo de todos los periodos");
             }
 
-            double nuevaTir =
-                tir -
-                (vpn / derivada);
+            flujos[i] = campo.getValue();
+        }
 
-            if (
-                Math.abs(
-                    nuevaTir - tir
-                ) < 0.00001
-            ) {
+        return flujos;
+    }
 
-                tir = nuevaTir;
+    private void actualizarCamposFlujo(AlternativaTir alternativa, Double valorPeriodos) {
+        alternativa.flujos().clear();
+        alternativa.flujosContainer().removeAll();
 
-                break;
+        if (valorPeriodos == null || !Double.isFinite(valorPeriodos) || valorPeriodos < 1) {
+            Paragraph indicacion = new Paragraph("Indique el numero de periodos para generar los flujos de efectivo.");
+            indicacion.getStyle().set("margin", "0").set("color", "#4b5563");
+            alternativa.flujosContainer().add(indicacion);
+            return;
+        }
+
+        int periodos = (int) Math.round(valorPeriodos);
+        if (Math.abs(periodos - valorPeriodos) > 0.00001) {
+            Paragraph indicacion = new Paragraph("El numero de periodos debe ser entero.");
+            indicacion.getStyle().set("margin", "0").set("color", "#4b5563");
+            alternativa.flujosContainer().add(indicacion);
+            return;
+        }
+
+        for (int periodo = 1; periodo <= periodos; periodo++) {
+            NumberField flujo = new NumberField("Flujo F" + periodo);
+            flujo.setPlaceholder("Ingrese F" + periodo);
+            flujo.setWidthFull();
+            flujo.setStep(0.01);
+            flujo.setMin(-999999999);
+            alternativa.flujos().add(flujo);
+            alternativa.flujosContainer().add(flujo);
+        }
+    }
+
+    private int obtenerPeriodoObligatorio(NumberField field, String mensajeError) {
+        double valor = obtenerNumeroObligatorio(field, mensajeError);
+        int periodo = (int) Math.round(valor);
+        if (periodo <= 0 || Math.abs(periodo - valor) > 0.00001) {
+            throw new IllegalArgumentException(mensajeError);
+        }
+        return periodo;
+    }
+
+    private double obtenerNumeroObligatorio(NumberField field, String mensajeError) {
+        if (field.isEmpty() || field.getValue() == null || !Double.isFinite(field.getValue())) {
+            throw new IllegalArgumentException(mensajeError);
+        }
+
+        return field.getValue();
+    }
+
+    private double calcularTIR(double inversionInicial, double[] flujos) {
+        double low = -0.9999;
+        double high = 1000.0;
+        double tir = 0;
+
+        for (int iteracion = 0; iteracion < 1000; iteracion++) {
+            tir = (low + high) / 2.0;
+            double vpn = -inversionInicial;
+
+            for (int t = 0; t < flujos.length; t++) {
+                vpn += flujos[t] / Math.pow(1 + tir, t + 1);
             }
 
-            tir = nuevaTir;
+            if (Math.abs(vpn) < 1e-7) {
+                return tir * 100;
+            }
+
+            if (vpn > 0) {
+                low = tir;
+            } else {
+                high = tir;
+            }
         }
 
         return tir * 100;
     }
 
-   // GENERAR PDF
-private StreamResource generarPDF()
-    throws Exception {
+    private byte[] generarPDF(ResultadoTir resultado) throws Exception {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage(PDRectangle.LETTER);
+            document.addPage(page);
 
-    ByteArrayOutputStream baos =
-        new ByteArrayOutputStream();
+            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+                float pageWidth = page.getMediaBox().getWidth();
+                float pageHeight = page.getMediaBox().getHeight();
 
-    Document documento =
-        new Document();
+                dibujarFondo(contentStream, pageWidth, pageHeight);
+                dibujarEncabezado(contentStream, pageWidth, pageHeight);
 
-    PdfWriter.getInstance(
-        documento,
-        baos
-    );
+                float leftX = 50;
+                float cardWidth = 240;
+                float cardHeight = 200;
+                float gap = 18;
 
-    documento.open();
+                dibujarAlternativa(contentStream, leftX, 650, "Alternativa A", resultado.alternativaA(),
+                        resultado.tirA(), new int[] { 54, 93, 173 });
+                dibujarAlternativa(contentStream, leftX + cardWidth + gap, 650, "Alternativa B",
+                        resultado.alternativaB(), resultado.tirB(), new int[] { 91, 123, 216 });
+                dibujarResumen(contentStream, leftX, 395, 500, 110, resultado);
+                dibujarPie(contentStream, pageWidth);
+            }
 
-    // TITULO
-    com.lowagie.text.Font tituloFont =
-        new com.lowagie.text.Font(
-            com.lowagie.text.Font.HELVETICA,
-            20,
-            com.lowagie.text.Font.BOLD
-        );
+            document.save(baos);
+            return baos.toByteArray();
+        }
+    }
 
-    com.lowagie.text.Font subtituloFont =
-        new com.lowagie.text.Font(
-            com.lowagie.text.Font.HELVETICA,
-            15,
-            com.lowagie.text.Font.BOLD
-        );
+    private void dibujarFondo(PDPageContentStream contentStream, float pageWidth, float pageHeight) throws Exception {
+        contentStream.setNonStrokingColor(rgb(245, 247, 252));
+        contentStream.addRect(0, 0, pageWidth, pageHeight);
+        contentStream.fill();
+    }
 
-    com.lowagie.text.Font textoFont =
-        new com.lowagie.text.Font(
-            com.lowagie.text.Font.HELVETICA,
-            12,
-            com.lowagie.text.Font.NORMAL
-        );
+    private void dibujarEncabezado(PDPageContentStream contentStream, float pageWidth, float pageHeight)
+            throws Exception {
+        contentStream.setNonStrokingColor(rgb(36, 64, 111));
+        contentStream.addRect(0, pageHeight - 115, pageWidth, 115);
+        contentStream.fill();
 
-    com.lowagie.text.Font resultadoFont =
-        new com.lowagie.text.Font(
-            com.lowagie.text.Font.HELVETICA,
-            13,
-            com.lowagie.text.Font.BOLD
-        );
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(255, 255, 255));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 20);
+        contentStream.newLineAtOffset(50, pageHeight - 55);
+        contentStream.showText("SEAE - Reporte de Tasa de Rendimiento");
+        contentStream.endText();
 
-    com.lowagie.text.Paragraph titulo =
-        new com.lowagie.text.Paragraph(
-            "REPORTE DE TASA DE RENDIMIENTO",
-            tituloFont
-        );
+        contentStream.beginText();
+        contentStream.setFont(PDType1Font.HELVETICA, 10);
+        contentStream.newLineAtOffset(50, pageHeight - 75);
+        contentStream.showText("Comparacion de alternativas con TIR.");
+        contentStream.endText();
+    }
 
-    titulo.setAlignment(
-        com.lowagie.text.Element.ALIGN_CENTER
-    );
+    private void dibujarAlternativa(PDPageContentStream contentStream, float x, float y, String titulo,
+            AlternativaTir alternativa, double tir, int[] colorBarra) throws Exception {
+        float width = 240;
+        float height = 200;
 
-    documento.add(titulo);
+        contentStream.setNonStrokingColor(rgb(255, 255, 255));
+        contentStream.addRect(x, y - height, width, height);
+        contentStream.fill();
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            " "
-        )
-    );
+        contentStream.setNonStrokingColor(rgb(220, 226, 237));
+        contentStream.addRect(x, y - 22, width, 22);
+        contentStream.fill();
 
-    // ALTERNATIVA A
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "ALTERNATIVA A",
-            subtituloFont
-        )
-    );
+        contentStream.setNonStrokingColor(rgb(colorBarra[0], colorBarra[1], colorBarra[2]));
+        contentStream.addRect(x, y - 22, width, 22);
+        contentStream.fill();
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Inversión Inicial: $"
-            + inversionA.getValue(),
-            textoFont
-        )
-    );
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(255, 255, 255));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 12);
+        contentStream.newLineAtOffset(x + 12, y - 16);
+        contentStream.showText(titulo);
+        contentStream.endText();
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Flujos de efectivo: "
-            + flujoA.getValue(),
-            textoFont
-        )
-    );
+        float textX = x + 14;
+        float textY = y - 48;
+        float lineGap = 17;
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Vida útil: "
-            + vidaA.getValue()
-            + " años",
-            textoFont
-        )
-    );
+        dibujarLineaClaveValor(contentStream, textX, textY, "Inversion inicial",
+                "$" + formatear(alternativa.inversion().getValue()));
+        dibujarLineaClaveValor(contentStream, textX, textY - lineGap, "Periodos",
+                formatear(alternativa.periodos().getValue()) + " años");
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "TIR Alternativa A: "
-            + String.format(
-                "%.2f",
-                tirA
-            )
-            + "%",
-            resultadoFont
-        )
-    );
+        String flujosStr = formatearFlujos(alternativa.flujos());
+        if (flujosStr.length() > 20) {
+            flujosStr = flujosStr.substring(0, 17) + "...";
+        }
+        dibujarLineaClaveValor(contentStream, textX, textY - (lineGap * 2), "Flujos", flujosStr);
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            " "
-        )
-    );
+        contentStream.setStrokingColor(rgb(230, 235, 244));
+        contentStream.moveTo(x + 12, y - 90);
+        contentStream.lineTo(x + width - 12, y - 90);
+        contentStream.stroke();
 
-    // ALTERNATIVA B
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "ALTERNATIVA B",
-            subtituloFont
-        )
-    );
+        dibujarTexto(contentStream, textX, y - 110, "TIR:", PDType1Font.HELVETICA_BOLD, 10, rgb(71, 85, 105));
+        String tirStr = Double.isNaN(tir) ? "No converge" : formatear(tir) + "%";
+        dibujarTexto(contentStream, textX + 35, y - 110, tirStr, PDType1Font.HELVETICA_BOLD, 11,
+                rgb(colorBarra[0], colorBarra[1], colorBarra[2]));
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Inversión Inicial: $"
-            + inversionB.getValue(),
-            textoFont
-        )
-    );
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(109, 117, 130));
+        contentStream.setFont(PDType1Font.HELVETICA_OBLIQUE, 9);
+        contentStream.newLineAtOffset(textX, y - 140);
+        contentStream.showText("Alternativa registrada para comparacion economica.");
+        contentStream.endText();
+    }
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Flujos de efectivo: "
-            + flujoB.getValue(),
-            textoFont
-        )
-    );
+    private void dibujarLineaClaveValor(PDPageContentStream contentStream, float x, float y, String etiqueta,
+            String valor) throws Exception {
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(71, 85, 105));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
+        contentStream.newLineAtOffset(x, y);
+        contentStream.showText(etiqueta + ":");
+        contentStream.endText();
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Vida útil: "
-            + vidaB.getValue()
-            + " años",
-            textoFont
-        )
-    );
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(15, 23, 42));
+        contentStream.setFont(PDType1Font.HELVETICA, 10);
+        contentStream.newLineAtOffset(x + 118, y);
+        contentStream.showText(valor);
+        contentStream.endText();
+    }
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "TIR Alternativa B: "
-            + String.format(
-                "%.2f",
-                tirB
-            )
-            + "%",
-            resultadoFont
-        )
-    );
+    private void dibujarResumen(PDPageContentStream contentStream, float x, float y, float width, float height,
+            ResultadoTir resultado) throws Exception {
+        contentStream.setNonStrokingColor(rgb(35, 64, 111));
+        contentStream.addRect(x, y - height, width, height);
+        contentStream.fill();
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            " "
-        )
-    );
+        contentStream.setNonStrokingColor(rgb(255, 255, 255));
+        contentStream.addRect(x + 6, y - height + 6, width - 12, height - 12);
+        contentStream.fill();
 
-    // MEJOR OPCION
-    com.lowagie.text.Paragraph mejor =
-        new com.lowagie.text.Paragraph(
-            "MEJOR OPCIÓN: "
-            + mejorAlternativa,
-            resultadoFont
-        );
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(35, 64, 111));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 13);
+        contentStream.newLineAtOffset(x + 16, y - 28);
+        contentStream.showText("Resumen y recomendacion");
+        contentStream.endText();
 
-    mejor.setAlignment(
-        com.lowagie.text.Element.ALIGN_CENTER
-    );
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(15, 23, 42));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 11);
+        contentStream.newLineAtOffset(x + 16, y - 52);
+        contentStream.showText("TIR Alternativa A: " + formatear(resultado.tirA()) + "%   TIR Alternativa B: "
+                + formatear(resultado.tirB()) + "%");
+        contentStream.endText();
 
-    documento.add(mejor);
+        contentStream.setNonStrokingColor(rgb(236, 241, 252));
+        contentStream.addRect(x + 16, y - 84, width - 32, 30);
+        contentStream.fill();
 
-    documento.close();
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(35, 64, 111));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
+        contentStream.newLineAtOffset(x + 24, y - 65);
+        contentStream.showText(
+                "Recomendacion: " + resultado.mejorAlternativa() + " es la opcion equivalente mas conveniente.");
+        contentStream.endText();
+    }
 
-    return new StreamResource(
-        "reporte_tir.pdf",
-        () ->
-            new ByteArrayInputStream(
-                baos.toByteArray()
-            )
-    );
-}
+    private void dibujarPie(PDPageContentStream contentStream, float pageWidth) throws Exception {
+        contentStream.setStrokingColor(rgb(214, 222, 235));
+        contentStream.moveTo(50, 70);
+        contentStream.lineTo(pageWidth - 50, 70);
+        contentStream.stroke();
 
-    // REGISTRO PDF
-    private String resourceRegistry(
-        StreamResource resource
-    ) {
+        dibujarTexto(contentStream, 50, 52, "Generado por SEAE - Sistema de Evaluacion de Alternativas Economicas",
+                PDType1Font.HELVETICA, 9, rgb(100, 116, 139));
+    }
 
-        return getUI().get()
-            .getSession()
-            .getResourceRegistry()
-            .registerResource(resource)
-            .getResourceUri()
-            .toString();
+    private void dibujarTexto(PDPageContentStream contentStream, float x, float y, String texto, PDType1Font font,
+            int size, PDColor color) throws Exception {
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(color);
+        contentStream.setFont(font, size);
+        contentStream.newLineAtOffset(x, y);
+        contentStream.showText(texto);
+        contentStream.endText();
+    }
+
+    private PDColor rgb(int red, int green, int blue) {
+        return new PDColor(new float[] { red / 255f, green / 255f, blue / 255f }, PDDeviceRGB.INSTANCE);
+    }
+
+    private String formatear(double valor) {
+        return String.format("%.2f", valor);
+    }
+
+    private String formatearFlujos(List<NumberField> flujos) {
+        StringJoiner joiner = new StringJoiner(", ");
+        for (NumberField flujo : flujos) {
+            joiner.add(flujo.isEmpty() ? "" : formatear(flujo.getValue()));
+        }
+
+        return joiner.toString();
+    }
+
+    private record AlternativaTir(VerticalLayout container, NumberField inversion, NumberField periodos,
+            VerticalLayout flujosContainer, List<NumberField> flujos) {
+    }
+
+    private record ResultadoTir(double tirA, double tirB, String mejorAlternativa, AlternativaTir alternativaA,
+            AlternativaTir alternativaB) {
     }
 }
