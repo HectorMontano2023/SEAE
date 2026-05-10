@@ -1,7 +1,19 @@
 package ues.edu.ine.componentes.ui;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Base64;
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+
 import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.HasStyle;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
@@ -21,6 +33,9 @@ import ues.edu.ine.base.ui.MainLayout;
 public class CostoAnualView extends VerticalLayout {
 
     private final Paragraph resultado = new Paragraph("Complete los datos y presione Calcular para ver el costo anual equivalente.");
+    private final NumberField tasaDescuentoField = new NumberField();
+    private AlternativaCosto alternativaA;
+    private AlternativaCosto alternativaB;
 
     public CostoAnualView() {
         setSizeFull();
@@ -56,8 +71,8 @@ public class CostoAnualView extends VerticalLayout {
             .set("max-width", "900px")
             .set("text-align", "center");
 
-        AlternativaCosto alternativaA = crearAlternativa("Alternativa A");
-        AlternativaCosto alternativaB = crearAlternativa("Alternativa B");
+        alternativaA = crearAlternativa("Alternativa A");
+        alternativaB = crearAlternativa("Alternativa B");
 
         HorizontalLayout alternativas = new HorizontalLayout(alternativaA.container(), alternativaB.container());
         alternativas.setSpacing(true);
@@ -75,28 +90,27 @@ public class CostoAnualView extends VerticalLayout {
             .set("padding", "20px")
             .set("border-radius", "15px");
 
-        NumberField tasaDescuento = new NumberField();
-        tasaDescuento.setPlaceholder("Ingrese el porcentaje");
-        tasaDescuento.setMin(0);
-        tasaDescuento.setStep(0.1);
-        tasaDescuento.setWidth("250px");
+        tasaDescuentoField.setPlaceholder("Ingrese el porcentaje");
+        tasaDescuentoField.setMin(0);
+        tasaDescuentoField.setStep(0.1);
+        tasaDescuentoField.setWidth("250px");
 
         Paragraph tasaLabel = new Paragraph("Tasa de descuento (%):");
         tasaLabel.getStyle().set("font-weight", "bold");
 
-        tasaLayout.add(tasaLabel, tasaDescuento);
+        tasaLayout.add(tasaLabel, tasaDescuentoField);
 
         Button calcular = new Button("Calcular");
         estiloBoton(calcular);
 
         calcular.addClickListener(event -> {
             try {
-                if (tasaDescuento.isEmpty()) {
+                if (tasaDescuentoField.isEmpty()) {
                     resultado.setText("Ingrese la tasa de descuento para calcular el costo anual equivalente.");
                     return;
                 }
 
-                double tasa = tasaDescuento.getValue();
+                double tasa = tasaDescuentoField.getValue();
                 double costoA = calcularCostoAnual(alternativaA, tasa);
                 double costoB = calcularCostoAnual(alternativaB, tasa);
 
@@ -110,6 +124,15 @@ public class CostoAnualView extends VerticalLayout {
                 resultado.setText("Complete todos los campos correctamente para calcular.");
             }
         });
+
+        Anchor exportar = new Anchor();
+        exportar.setHref(crearUrlPdf());
+        exportar.getElement().setAttribute("download", true);
+        exportar.setText("Exportar PDF");
+        estiloBoton(exportar);
+
+        HorizontalLayout acciones = new HorizontalLayout(calcular, exportar);
+        acciones.setSpacing(true);
 
         VerticalLayout resultadoCard = new VerticalLayout();
         resultadoCard.getStyle()
@@ -125,7 +148,7 @@ public class CostoAnualView extends VerticalLayout {
             subtitulo,
             alternativas,
             tasaLayout,
-            calcular,
+            acciones,
             resultadoCard
         );
 
@@ -179,7 +202,7 @@ public class CostoAnualView extends VerticalLayout {
         return campo;
     }
 
-    private void estiloBoton(Button boton) {
+    private void estiloBoton(HasStyle boton) {
         boton.getStyle()
             .set("background", "linear-gradient(90deg, #23406f, #5a7bd8)")
             .set("color", "white")
@@ -187,6 +210,53 @@ public class CostoAnualView extends VerticalLayout {
             .set("padding", "12px 28px")
             .set("font-weight", "bold")
             .set("border", "none");
+    }
+
+    private String crearUrlPdf() {
+        return "data:application/pdf;base64," + Base64.getEncoder().encodeToString(generarPdf());
+    }
+
+    private byte[] generarPdf() {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream(); PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage(PDRectangle.LETTER);
+            document.addPage(page);
+
+            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+                contentStream.beginText();
+                contentStream.setFont(PDType1Font.HELVETICA_BOLD, 16);
+                contentStream.newLineAtOffset(50, 730);
+                contentStream.showText("SEAE - Reporte de Costo Anual");
+
+                contentStream.setFont(PDType1Font.HELVETICA, 11);
+                contentStream.newLineAtOffset(0, -30);
+                escribirLinea(contentStream, "Tasa de descuento: " + valorTexto(tasaDescuentoField) + " %");
+                escribirLinea(contentStream, "Alternativa A - Inversion inicial: $" + valorTexto(alternativaA.inversion()));
+                escribirLinea(contentStream, "Alternativa A - Costo operativo anual: $" + valorTexto(alternativaA.costoOperativo()));
+                escribirLinea(contentStream, "Alternativa A - Valor de rescate: $" + valorTexto(alternativaA.valorRescate()));
+                escribirLinea(contentStream, "Alternativa A - Vida util: " + valorTexto(alternativaA.vidaUtil()) + " anos");
+                escribirLinea(contentStream, "Alternativa B - Inversion inicial: $" + valorTexto(alternativaB.inversion()));
+                escribirLinea(contentStream, "Alternativa B - Costo operativo anual: $" + valorTexto(alternativaB.costoOperativo()));
+                escribirLinea(contentStream, "Alternativa B - Valor de rescate: $" + valorTexto(alternativaB.valorRescate()));
+                escribirLinea(contentStream, "Alternativa B - Vida util: " + valorTexto(alternativaB.vidaUtil()) + " anos");
+                escribirLinea(contentStream, "");
+                escribirLinea(contentStream, "Resultado: " + resultado.getText());
+                contentStream.endText();
+            }
+
+            document.save(outputStream);
+            return outputStream.toByteArray();
+        } catch (IOException ex) {
+            throw new IllegalStateException("No se pudo generar el PDF", ex);
+        }
+    }
+
+    private void escribirLinea(PDPageContentStream contentStream, String texto) throws IOException {
+        contentStream.showText(texto);
+        contentStream.newLineAtOffset(0, -16);
+    }
+
+    private String valorTexto(NumberField field) {
+        return field.isEmpty() ? "" : formatear(field.getValue());
     }
 
     private double calcularCostoAnual(AlternativaCosto alternativa, double tasa) {
