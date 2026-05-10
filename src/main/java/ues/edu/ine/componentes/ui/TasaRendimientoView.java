@@ -3,6 +3,7 @@ package ues.edu.ine.componentes.ui;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.StringJoiner;
 
@@ -148,11 +149,11 @@ public class TasaRendimientoView extends VerticalLayout {
             }
 
             try {
-                StreamResource resource = generarPDF(ultimoResultado);
-                descargaPdf.setHref(resource);
-                descargaPdf.getElement().executeJs("this.click()");
+                descargaPdf.setHref("data:application/pdf;base64," + Base64.getEncoder().encodeToString(generarPDF(ultimoResultado)));
+                descargaPdf.getElement().executeJs("setTimeout(function() { $0.click(); }, 150);", descargaPdf.getElement());
             } catch (Exception ex) {
-                Notification.show("Error al generar PDF");
+                ex.printStackTrace();
+                Notification.show("Error al generar PDF: " + ex.getMessage(), 5000, Position.MIDDLE);
             }
         });
 
@@ -219,8 +220,8 @@ public class TasaRendimientoView extends VerticalLayout {
         double inversionAValor = obtenerNumeroObligatorio(alternativaA.inversion(), "Alternativa A: la inversion inicial es obligatoria");
         double inversionBValor = obtenerNumeroObligatorio(alternativaB.inversion(), "Alternativa B: la inversion inicial es obligatoria");
 
-        int vidaAValor = obtenerPeriodoObligatorio(alternativaA.vida(), "Alternativa A: la vida util debe ser mayor que cero");
-        int vidaBValor = obtenerPeriodoObligatorio(alternativaB.vida(), "Alternativa B: la vida util debe ser mayor que cero");
+        int vidaAValor = obtenerPeriodoObligatorio(alternativaA.periodos(), "Alternativa A: la vida util debe ser mayor que cero");
+        int vidaBValor = obtenerPeriodoObligatorio(alternativaB.periodos(), "Alternativa B: la vida util debe ser mayor que cero");
 
         if (alternativaA.flujos().size() != vidaAValor) {
             throw new IllegalArgumentException("Alternativa A: complete un flujo por cada periodo generado");
@@ -348,10 +349,8 @@ public class TasaRendimientoView extends VerticalLayout {
         return tir * 100;
     }
 
-    private StreamResource generarPDF(ResultadoTir resultado) throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-        try (PDDocument document = new PDDocument()) {
+    private byte[] generarPDF(ResultadoTir resultado) throws Exception {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PDDocument document = new PDDocument()) {
             PDPage page = new PDPage(PDRectangle.LETTER);
             document.addPage(page);
 
@@ -374,9 +373,8 @@ public class TasaRendimientoView extends VerticalLayout {
             }
 
             document.save(baos);
+            return baos.toByteArray();
         }
-
-        return new StreamResource("reporte_tir.pdf", () -> new ByteArrayInputStream(baos.toByteArray()));
     }
 
     private void dibujarFondo(PDPageContentStream contentStream, float pageWidth, float pageHeight) throws Exception {
@@ -529,9 +527,6 @@ public class TasaRendimientoView extends VerticalLayout {
         return new PDColor(new float[] { red / 255f, green / 255f, blue / 255f }, PDDeviceRGB.INSTANCE);
     }
 
-    private String resourceRegistry(StreamResource resource) {
-        return getUI().get().getSession().getResourceRegistry().registerResource(resource).getResourceUri().toString();
-    }
 
     private String formatear(double valor) {
         return String.format("%.2f", valor);

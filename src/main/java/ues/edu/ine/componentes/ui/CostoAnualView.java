@@ -151,7 +151,7 @@ public class CostoAnualView extends VerticalLayout {
             }
 
             descargaPdf.setHref(crearUrlPdf());
-            descargaPdf.getElement().executeJs("this.click()");
+            descargaPdf.getElement().executeJs("setTimeout(function() { $0.click(); }, 150);", descargaPdf.getElement());
         });
 
         mainContainer.add(

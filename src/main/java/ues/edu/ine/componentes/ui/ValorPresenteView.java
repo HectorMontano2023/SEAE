@@ -2,6 +2,7 @@ package ues.edu.ine.componentes.ui;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.Base64;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -156,11 +157,11 @@ public class ValorPresenteView extends VerticalLayout {
             }
 
             try {
-                StreamResource resource = generarPdf(ultimoResultado);
-                descargaPdf.setHref(resource);
-                descargaPdf.getElement().executeJs("this.click()");
+                descargaPdf.setHref("data:application/pdf;base64," + Base64.getEncoder().encodeToString(generarPdf(ultimoResultado)));
+                descargaPdf.getElement().executeJs("setTimeout(function() { $0.click(); }, 150);", descargaPdf.getElement());
             } catch (Exception ex) {
-                Notification.show("Error al generar PDF");
+                ex.printStackTrace();
+                Notification.show("Error al generar PDF: " + ex.getMessage(), 5000, Position.MIDDLE);
             }
         });
 
@@ -263,10 +264,8 @@ public class ValorPresenteView extends VerticalLayout {
         boton.addClassName("seae-primary-button");
     }
 
-    private StreamResource generarPdf(ResultadoVP resultado) throws Exception {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-        try (PDDocument document = new PDDocument()) {
+    private byte[] generarPdf(ResultadoVP resultado) throws Exception {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream(); PDDocument document = new PDDocument()) {
             PDPage page = new PDPage(PDRectangle.LETTER);
             document.addPage(page);
 
@@ -281,9 +280,8 @@ public class ValorPresenteView extends VerticalLayout {
             }
 
             document.save(outputStream);
+            return outputStream.toByteArray();
         }
-
-        return new StreamResource("reporte_valor_presente.pdf", () -> new ByteArrayInputStream(outputStream.toByteArray()));
     }
 
     private void dibujarFondo(PDPageContentStream contentStream, float pageWidth, float pageHeight) throws Exception {
@@ -467,9 +465,6 @@ public class ValorPresenteView extends VerticalLayout {
         return new PDColor(new float[] { red / 255f, green / 255f, blue / 255f }, PDDeviceRGB.INSTANCE);
     }
 
-    private String resourceRegistry(StreamResource resource) {
-        return getUI().get().getSession().getResourceRegistry().registerResource(resource).getResourceUri().toString();
-    }
 
     private String formatear(double valor) {
         return String.format("%.2f", valor);
