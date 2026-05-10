@@ -37,18 +37,17 @@ public final class MainLayout extends AppLayout {
 
         var appLogo = new Avatar("SEAE");
         appLogo.addThemeVariants(AvatarVariant.AURA_FILLED, AvatarVariant.XSMALL);
+        appLogo.addClassName("app-logo");
 
         var appName = new Span("SEAE");
         appName.getStyle().set("font-weight", "bold");
+        appName.addClassName("app-name");
 
         var header = new HorizontalLayout(toggle, appLogo, appName);
         header.setAlignItems(FlexComponent.Alignment.CENTER);
         header.setWidthFull();
         header.setPadding(true);
-
-        header.getStyle()
-                .set("background-color", "white")
-                .set("border-bottom", "1px solid #ddd");
+        header.addClassName("app-header");
 
         return header;
     }

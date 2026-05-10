@@ -13,6 +13,7 @@ import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
 
 import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.HasStyle;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Anchor;
@@ -45,10 +46,7 @@ public class CostoAnualView extends VerticalLayout {
         setSizeFull();
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);
-
-        getStyle()
-            .set("background", "linear-gradient(135deg, #23406f, #5a7bd8)")
-            .set("padding", "20px");
+        addClassName("seae-page");
 
         VerticalLayout mainContainer = new VerticalLayout();
         mainContainer.setMaxWidth("1100px");
@@ -56,24 +54,13 @@ public class CostoAnualView extends VerticalLayout {
         mainContainer.setPadding(true);
         mainContainer.setSpacing(true);
         mainContainer.setAlignItems(Alignment.CENTER);
-
-        mainContainer.getStyle()
-            .set("background-color", "#f4f6fb")
-            .set("border-radius", "25px")
-            .set("box-shadow", "0 8px 25px rgba(0, 0, 0, 0.15)")
-            .set("padding", "35px");
+        mainContainer.addClassName("seae-surface");
 
         H1 titulo = new H1("Evaluación de Alternativas Económicas: Costo Anual");
-        titulo.getStyle()
-            .set("margin-bottom", "0")
-            .set("font-size", "clamp(28px, 4vw, 48px)")
-            .set("color", "#1f2937");
+        titulo.addClassName("seae-view-title");
 
         Paragraph subtitulo = new Paragraph("Compare dos alternativas con base en su costo anual equivalente. La opción recomendada es la de menor costo anual.");
-        subtitulo.getStyle()
-            .set("color", "#4b5563")
-            .set("max-width", "900px")
-            .set("text-align", "center");
+        subtitulo.addClassName("seae-view-subtitle");
 
         alternativaA = crearAlternativa("Alternativa A");
         alternativaB = crearAlternativa("Alternativa B");
@@ -88,11 +75,7 @@ public class CostoAnualView extends VerticalLayout {
         tasaLayout.setWidth("100%");
         tasaLayout.setAlignItems(Alignment.CENTER);
         tasaLayout.setJustifyContentMode(JustifyContentMode.CENTER);
-
-        tasaLayout.getStyle()
-            .set("background-color", "#e9eefb")
-            .set("padding", "20px")
-            .set("border-radius", "15px");
+        tasaLayout.addClassName("seae-result-card");
 
         tasaDescuentoField.setPlaceholder("Ingrese el porcentaje");
         tasaDescuentoField.setMin(0);
@@ -166,18 +149,10 @@ public class CostoAnualView extends VerticalLayout {
         card.setMaxWidth("420px");
         card.setPadding(true);
         card.setSpacing(true);
-
-        card.getStyle()
-            .set("background-color", "#ffffff")
-            .set("border-radius", "20px")
-            .set("box-shadow", "0 4px 12px rgba(0,0,0,0.1)")
-            .set("padding", "25px");
+        card.addClassName("seae-card");
 
         H2 titulo = new H2(tituloTexto);
-        titulo.getStyle()
-            .set("color", "#1f4b99")
-            .set("border-left", "4px solid #5a7bd8")
-            .set("padding-left", "12px");
+        titulo.addClassName("seae-card-title");
 
         NumberField inversion = crearCampoNumero("Inversión inicial", "Ingrese la inversión inicial");
         NumberField costoOperativo = crearCampoNumero("Costo operativo anual", "Ingrese el costo anual");
@@ -236,13 +211,12 @@ public class CostoAnualView extends VerticalLayout {
     }
 
     private void estiloBoton(HasStyle boton) {
-        boton.getStyle()
-            .set("background", "linear-gradient(90deg, #23406f, #5a7bd8)")
-            .set("color", "white")
-            .set("border-radius", "25px")
-            .set("padding", "12px 28px")
-            .set("font-weight", "bold")
-            .set("border", "none");
+        if (boton instanceof Button button) {
+            button.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+            button.addClassName("seae-primary-button");
+        } else {
+            boton.addClassName("seae-primary-button");
+        }
     }
 
     private String crearUrlPdf() {
