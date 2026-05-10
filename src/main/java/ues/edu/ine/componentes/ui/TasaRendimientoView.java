@@ -121,6 +121,7 @@ public class TasaRendimientoView extends VerticalLayout {
                 if (resultado == null) {
                     ultimoResultado = null;
                     panelResultados.setVisible(false);
+                    indicaciones.setVisible(true);
                     exportar.setEnabled(false);
                     Notification.show("Complete correctamente los datos de ambas alternativas");
                     return;
@@ -128,11 +129,13 @@ public class TasaRendimientoView extends VerticalLayout {
 
                 mostrarResultado(resultado);
                 panelResultados.setVisible(true);
+                indicaciones.setVisible(false);
                 exportar.setEnabled(true);
                 Notification.show("Comparacion realizada", 3000, Position.MIDDLE);
             } catch (IllegalArgumentException ex) {
                 ultimoResultado = null;
                 panelResultados.setVisible(false);
+                indicaciones.setVisible(true);
                 exportar.setEnabled(false);
                 Notification.show(ex.getMessage(), 4500, Position.MIDDLE);
             }
@@ -319,39 +322,30 @@ public class TasaRendimientoView extends VerticalLayout {
     }
 
     private double calcularTIR(double inversionInicial, double[] flujos) {
-        double tir = 0.1;
+        double low = -0.9999;
+        double high = 1000.0;
+        double tir = 0;
 
-        for (int iteracion = 0; iteracion < 100; iteracion++) {
+        for (int iteracion = 0; iteracion < 1000; iteracion++) {
+            tir = (low + high) / 2.0;
             double vpn = -inversionInicial;
-            double derivada = 0;
 
             for (int t = 0; t < flujos.length; t++) {
-                double factor = Math.pow(1 + tir, t + 1);
-                if (!Double.isFinite(factor) || factor == 0.0) {
-                    throw new IllegalArgumentException("La TIR no converge con los flujos ingresados");
-                }
-
-                vpn += flujos[t] / factor;
-                derivada -= (t + 1) * flujos[t] / (factor * (1 + tir));
+                vpn += flujos[t] / Math.pow(1 + tir, t + 1);
             }
 
-            if (Math.abs(derivada) < 1e-12) {
-                throw new IllegalArgumentException("La TIR no converge con los flujos ingresados");
+            if (Math.abs(vpn) < 1e-7) {
+                return tir * 100;
             }
 
-            double nuevaTir = tir - (vpn / derivada);
-            if (!Double.isFinite(nuevaTir) || nuevaTir <= -0.999999) {
-                throw new IllegalArgumentException("La TIR no converge con los flujos ingresados");
+            if (vpn > 0) {
+                low = tir;
+            } else {
+                high = tir;
             }
-
-            if (Math.abs(nuevaTir - tir) < 0.00001) {
-                return nuevaTir * 100;
-            }
-
-            tir = nuevaTir;
         }
 
-        throw new IllegalArgumentException("La TIR no converge con los flujos ingresados");
+        return tir * 100;
     }
 
     private StreamResource generarPDF(ResultadoTir resultado) throws Exception {
@@ -367,9 +361,15 @@ public class TasaRendimientoView extends VerticalLayout {
 
                 dibujarFondo(contentStream, pageWidth, pageHeight);
                 dibujarEncabezado(contentStream, pageWidth, pageHeight);
-                dibujarAlternativa(contentStream, 50, pageHeight - 150, "ALTERNATIVA A", resultado.alternativaA(), resultado.tirA());
-                dibujarAlternativa(contentStream, 300, pageHeight - 150, "ALTERNATIVA B", resultado.alternativaB(), resultado.tirB());
-                dibujarResumen(contentStream, 50, pageHeight - 330, 500, 80, resultado.mejorAlternativa());
+
+                float leftX = 50;
+                float cardWidth = 240;
+                float cardHeight = 200;
+                float gap = 18;
+
+                dibujarAlternativa(contentStream, leftX, 650, "Alternativa A", resultado.alternativaA(), resultado.tirA(), new int[] { 54, 93, 173 });
+                dibujarAlternativa(contentStream, leftX + cardWidth + gap, 650, "Alternativa B", resultado.alternativaB(), resultado.tirB(), new int[] { 91, 123, 216 });
+                dibujarResumen(contentStream, leftX, 395, 500, 110, resultado);
                 dibujarPie(contentStream, pageWidth);
             }
 
@@ -404,23 +404,75 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.endText();
     }
 
-    private void dibujarAlternativa(PDPageContentStream contentStream, float x, float y, String titulo, AlternativaTir alternativa, double tir) throws Exception {
+    private void dibujarAlternativa(PDPageContentStream contentStream, float x, float y, String titulo, AlternativaTir alternativa, double tir, int[] colorBarra) throws Exception {
+        float width = 240;
+        float height = 200;
+
         contentStream.setNonStrokingColor(rgb(255, 255, 255));
-        contentStream.addRect(x, y - 180, 220, 180);
+        contentStream.addRect(x, y - height, width, height);
         contentStream.fill();
 
-        contentStream.setNonStrokingColor(rgb(123, 75, 183));
-        contentStream.addRect(x, y - 22, 220, 22);
+        contentStream.setNonStrokingColor(rgb(220, 226, 237));
+        contentStream.addRect(x, y - 22, width, 22);
         contentStream.fill();
 
-        dibujarTexto(contentStream, x + 12, y - 16, titulo, PDType1Font.HELVETICA_BOLD, 12, rgb(255, 255, 255));
-        dibujarTexto(contentStream, x + 12, y - 50, "Inversion inicial: $" + formatear(alternativa.inversion().getValue()), PDType1Font.HELVETICA, 10, rgb(15, 23, 42));
-        dibujarTexto(contentStream, x + 12, y - 70, "Periodos: " + formatear(alternativa.periodos().getValue()) + " anos", PDType1Font.HELVETICA, 10, rgb(15, 23, 42));
-        dibujarTexto(contentStream, x + 12, y - 90, "Flujos: " + formatearFlujos(alternativa.flujos()), PDType1Font.HELVETICA, 10, rgb(15, 23, 42));
-        dibujarTexto(contentStream, x + 12, y - 120, "TIR: " + formatear(tir) + "%", PDType1Font.HELVETICA_BOLD, 11, rgb(46, 125, 50));
+        contentStream.setNonStrokingColor(rgb(colorBarra[0], colorBarra[1], colorBarra[2]));
+        contentStream.addRect(x, y - 22, width, 22);
+        contentStream.fill();
+
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(255, 255, 255));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 12);
+        contentStream.newLineAtOffset(x + 12, y - 16);
+        contentStream.showText(titulo);
+        contentStream.endText();
+
+        float textX = x + 14;
+        float textY = y - 48;
+        float lineGap = 17;
+
+        dibujarLineaClaveValor(contentStream, textX, textY, "Inversion inicial", "$" + formatear(alternativa.inversion().getValue()));
+        dibujarLineaClaveValor(contentStream, textX, textY - lineGap, "Periodos", formatear(alternativa.periodos().getValue()) + " anos");
+
+        String flujosStr = formatearFlujos(alternativa.flujos());
+        if (flujosStr.length() > 20) {
+            flujosStr = flujosStr.substring(0, 17) + "...";
+        }
+        dibujarLineaClaveValor(contentStream, textX, textY - (lineGap * 2), "Flujos", flujosStr);
+
+        contentStream.setStrokingColor(rgb(230, 235, 244));
+        contentStream.moveTo(x + 12, y - 90);
+        contentStream.lineTo(x + width - 12, y - 90);
+        contentStream.stroke();
+
+        dibujarLineaTexto(contentStream, textX, y - 110, "TIR:", PDType1Font.HELVETICA_BOLD, 10, rgb(71, 85, 105));
+        dibujarLineaTexto(contentStream, textX + 118, y - 110, formatear(tir) + "%", PDType1Font.HELVETICA_BOLD, 11, rgb(46, 125, 50));
+
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(109, 117, 130));
+        contentStream.setFont(PDType1Font.HELVETICA_OBLIQUE, 9);
+        contentStream.newLineAtOffset(textX, y - 140);
+        contentStream.showText("Alternativa registrada para comparacion economica.");
+        contentStream.endText();
     }
 
-    private void dibujarResumen(PDPageContentStream contentStream, float x, float y, float width, float height, String mejorAlternativa) throws Exception {
+    private void dibujarLineaClaveValor(PDPageContentStream contentStream, float x, float y, String etiqueta, String valor) throws Exception {
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(71, 85, 105));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
+        contentStream.newLineAtOffset(x, y);
+        contentStream.showText(etiqueta + ":");
+        contentStream.endText();
+
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(15, 23, 42));
+        contentStream.setFont(PDType1Font.HELVETICA, 10);
+        contentStream.newLineAtOffset(x + 118, y);
+        contentStream.showText(valor);
+        contentStream.endText();
+    }
+
+    private void dibujarResumen(PDPageContentStream contentStream, float x, float y, float width, float height, ResultadoTir resultado) throws Exception {
         contentStream.setNonStrokingColor(rgb(35, 64, 111));
         contentStream.addRect(x, y - height, width, height);
         contentStream.fill();
@@ -429,8 +481,30 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.addRect(x + 6, y - height + 6, width - 12, height - 12);
         contentStream.fill();
 
-        dibujarTexto(contentStream, x + 16, y - 26, "Resumen", PDType1Font.HELVETICA_BOLD, 13, rgb(35, 64, 111));
-        dibujarTexto(contentStream, x + 16, y - 50, "Mejor opcion: " + mejorAlternativa, PDType1Font.HELVETICA_BOLD, 11, rgb(35, 64, 111));
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(35, 64, 111));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 13);
+        contentStream.newLineAtOffset(x + 16, y - 28);
+        contentStream.showText("Resumen y recomendacion");
+        contentStream.endText();
+
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(15, 23, 42));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 11);
+        contentStream.newLineAtOffset(x + 16, y - 52);
+        contentStream.showText("TIR Alternativa A: " + formatear(resultado.tirA()) + "%   TIR Alternativa B: " + formatear(resultado.tirB()) + "%");
+        contentStream.endText();
+
+        contentStream.setNonStrokingColor(rgb(236, 241, 252));
+        contentStream.addRect(x + 16, y - 84, width - 32, 30);
+        contentStream.fill();
+
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(35, 64, 111));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
+        contentStream.newLineAtOffset(x + 24, y - 65);
+        contentStream.showText("Recomendacion: " + resultado.mejorAlternativa() + " es la opcion equivalente mas conveniente.");
+        contentStream.endText();
     }
 
     private void dibujarPie(PDPageContentStream contentStream, float pageWidth) throws Exception {

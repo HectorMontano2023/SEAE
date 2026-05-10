@@ -39,7 +39,9 @@ public class ValorPresenteView extends VerticalLayout {
     private AlternativaVP alternativaA;
     private AlternativaVP alternativaB;
     private NumberField tasaDescuento;
-    private final Paragraph resultado = new Paragraph("Complete los datos y presione Comparar para ver el valor presente.");
+    private final Paragraph resultadoA = new Paragraph("VP Alternativa A: --");
+    private final Paragraph resultadoB = new Paragraph("VP Alternativa B: --");
+    private final Paragraph mejorResultado = new Paragraph("Mejor alternativa: --");
     private ResultadoVP ultimoResultado;
 
     public ValorPresenteView() {
@@ -98,24 +100,51 @@ public class ValorPresenteView extends VerticalLayout {
         descargaPdf.getElement().setAttribute("download", "reporte_valor_presente.pdf");
         descargaPdf.getStyle().set("display", "none");
 
+        VerticalLayout indicaciones = new VerticalLayout();
+        indicaciones.setWidthFull();
+        indicaciones.setAlignItems(Alignment.CENTER);
+        indicaciones.addClassName("seae-callout-card");
+        Paragraph indicacionTexto = new Paragraph("Complete los datos y presione Comparar para ver el valor presente.");
+        indicacionTexto.getStyle().set("margin", "0").set("text-align", "center");
+        indicaciones.add(indicacionTexto);
+
+        VerticalLayout panelResultados = new VerticalLayout();
+        panelResultados.setWidthFull();
+        panelResultados.setMaxWidth("750px");
+        panelResultados.setAlignItems(Alignment.CENTER);
+        panelResultados.setVisible(false);
+        panelResultados.addClassName("seae-result-card");
+
+        H2 tituloResultados = new H2("Resultados");
+        tituloResultados.getStyle().set("color", "#23406f");
+        resultadoA.addClassName("seae-result-value");
+        resultadoB.addClassName("seae-result-value");
+        mejorResultado.addClassName("seae-result-value");
+        mejorResultado.addClassName("seae-result-highlight");
+        panelResultados.add(tituloResultados, resultadoA, resultadoB, mejorResultado);
+
         comparar.addClickListener(event -> {
             try {
                 ResultadoVP resultadoCalculado = calcularResultado();
                 if (resultadoCalculado == null) {
                     ultimoResultado = null;
                     exportar.setEnabled(false);
-                    resultado.setText("Complete todos los campos correctamente para comparar.");
+                    panelResultados.setVisible(false);
+                    indicaciones.setVisible(true);
                     Notification.show("Complete todos los campos correctamente");
                     return;
                 }
 
                 mostrarResultado(resultadoCalculado);
+                panelResultados.setVisible(true);
+                indicaciones.setVisible(false);
                 exportar.setEnabled(true);
                 Notification.show("Comparacion realizada", 3500, Position.MIDDLE);
             } catch (IllegalArgumentException ex) {
                 ultimoResultado = null;
                 exportar.setEnabled(false);
-                resultado.setText(ex.getMessage());
+                panelResultados.setVisible(false);
+                indicaciones.setVisible(true);
                 Notification.show(ex.getMessage(), 4000, Position.MIDDLE);
             }
         });
@@ -138,11 +167,7 @@ public class ValorPresenteView extends VerticalLayout {
         HorizontalLayout botones = new HorizontalLayout(comparar, exportar);
         botones.addClassName("seae-actions");
 
-        VerticalLayout resultadoCard = new VerticalLayout();
-        resultadoCard.addClassName("seae-result-card");
-        resultadoCard.add(resultado);
-
-        mainContainer.add(titulo, subtitulo, alternativas, tasaLayout, botones, descargaPdf, resultadoCard);
+        mainContainer.add(titulo, subtitulo, alternativas, tasaLayout, botones, indicaciones, panelResultados, descargaPdf);
         add(mainContainer);
     }
 
@@ -195,11 +220,9 @@ public class ValorPresenteView extends VerticalLayout {
 
     private void mostrarResultado(ResultadoVP resultadoCalculado) {
         ultimoResultado = resultadoCalculado;
-        resultado.setText(
-            "VP A: $" + formatear(resultadoCalculado.vpA()) +
-            " | VP B: $" + formatear(resultadoCalculado.vpB()) +
-            " | Mejor opcion: " + resultadoCalculado.mejor()
-        );
+        resultadoA.setText("VP Alternativa A: $" + formatear(resultadoCalculado.vpA()));
+        resultadoB.setText("VP Alternativa B: $" + formatear(resultadoCalculado.vpB()));
+        mejorResultado.setText("Mejor opcion: " + resultadoCalculado.mejor());
     }
 
     private double calcularVP(AlternativaVP alternativa, double tasa) {
@@ -304,30 +327,117 @@ public class ValorPresenteView extends VerticalLayout {
     }
 
     private void dibujarContenido(PDPageContentStream contentStream, ResultadoVP resultado, float pageHeight) throws Exception {
-        float startY = pageHeight - 150;
-        float lineGap = 18;
+        float leftX = 50;
+        float cardWidth = 240;
+        float cardHeight = 200;
+        float gap = 18;
 
-        dibujarLineaTexto(contentStream, 50, startY, "Alternativa A", PDType1Font.HELVETICA_BOLD, 12, rgb(36, 64, 111));
-        dibujarLineaTexto(contentStream, 50, startY - lineGap, "Inversion inicial: $" + formatear(resultado.alternativaA().inversion().getValue()), PDType1Font.HELVETICA, 11, rgb(15, 23, 42));
-        dibujarLineaTexto(contentStream, 50, startY - (lineGap * 2), "Flujo anual: $" + formatear(resultado.alternativaA().flujo().getValue()), PDType1Font.HELVETICA, 11, rgb(15, 23, 42));
-        dibujarLineaTexto(contentStream, 50, startY - (lineGap * 3), "Vida util: " + formatear(resultado.alternativaA().vida().getValue()) + " anos", PDType1Font.HELVETICA, 11, rgb(15, 23, 42));
-        dibujarLineaTexto(contentStream, 50, startY - (lineGap * 4), "VP: $" + formatear(resultado.vpA()), PDType1Font.HELVETICA_BOLD, 11, rgb(31, 65, 135));
+        dibujarTarjetaAlternativa(contentStream, leftX, 650, cardWidth, cardHeight, "Alternativa A", resultado.alternativaA(), resultado.vpA(), new int[] { 54, 93, 173 });
+        dibujarTarjetaAlternativa(contentStream, leftX + cardWidth + gap, 650, cardWidth, cardHeight, "Alternativa B", resultado.alternativaB(), resultado.vpB(), new int[] { 91, 123, 216 });
 
-        dibujarLineaTexto(contentStream, 300, startY, "Alternativa B", PDType1Font.HELVETICA_BOLD, 12, rgb(36, 64, 111));
-        dibujarLineaTexto(contentStream, 300, startY - lineGap, "Inversion inicial: $" + formatear(resultado.alternativaB().inversion().getValue()), PDType1Font.HELVETICA, 11, rgb(15, 23, 42));
-        dibujarLineaTexto(contentStream, 300, startY - (lineGap * 2), "Flujo anual: $" + formatear(resultado.alternativaB().flujo().getValue()), PDType1Font.HELVETICA, 11, rgb(15, 23, 42));
-        dibujarLineaTexto(contentStream, 300, startY - (lineGap * 3), "Vida util: " + formatear(resultado.alternativaB().vida().getValue()) + " anos", PDType1Font.HELVETICA, 11, rgb(15, 23, 42));
-        dibujarLineaTexto(contentStream, 300, startY - (lineGap * 4), "VP: $" + formatear(resultado.vpB()), PDType1Font.HELVETICA_BOLD, 11, rgb(31, 65, 135));
+        dibujarBloqueResumen(contentStream, leftX, 395, pageHeight - 100, 130, resultado);
+    }
 
+    private void dibujarTarjetaAlternativa(PDPageContentStream contentStream, float x, float y, float width, float height, String titulo, AlternativaVP alternativa, double vp, int[] colorBarra) throws Exception {
+        contentStream.setNonStrokingColor(rgb(255, 255, 255));
+        contentStream.addRect(x, y - height, width, height);
+        contentStream.fill();
+
+        contentStream.setNonStrokingColor(rgb(220, 226, 237));
+        contentStream.addRect(x, y - 22, width, 22);
+        contentStream.fill();
+
+        contentStream.setNonStrokingColor(rgb(colorBarra[0], colorBarra[1], colorBarra[2]));
+        contentStream.addRect(x, y - 22, width, 22);
+        contentStream.fill();
+
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(255, 255, 255));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 12);
+        contentStream.newLineAtOffset(x + 12, y - 16);
+        contentStream.showText(titulo);
+        contentStream.endText();
+
+        float textX = x + 14;
+        float textY = y - 48;
+        float lineGap = 17;
+
+        dibujarLineaClaveValor(contentStream, textX, textY, "Inversion inicial", "$" + formatear(alternativa.inversion().getValue()));
+        dibujarLineaClaveValor(contentStream, textX, textY - lineGap, "Flujo anual", "$" + formatear(alternativa.flujo().getValue()));
+        dibujarLineaClaveValor(contentStream, textX, textY - (lineGap * 2), "Vida util", formatear(alternativa.vida().getValue()) + " anos");
+
+        contentStream.setStrokingColor(rgb(230, 235, 244));
+        contentStream.moveTo(x + 12, y - 90);
+        contentStream.lineTo(x + width - 12, y - 90);
+        contentStream.stroke();
+
+        dibujarLineaTexto(contentStream, textX, y - 110, "Valor Presente:", PDType1Font.HELVETICA_BOLD, 10, rgb(71, 85, 105));
+        dibujarLineaTexto(contentStream, textX + 118, y - 110, "$" + formatear(vp), PDType1Font.HELVETICA_BOLD, 11, rgb(31, 65, 135));
+
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(109, 117, 130));
+        contentStream.setFont(PDType1Font.HELVETICA_OBLIQUE, 9);
+        contentStream.newLineAtOffset(textX, y - 140);
+        contentStream.showText("Alternativa registrada para comparacion economica.");
+        contentStream.endText();
+    }
+
+    private void dibujarLineaClaveValor(PDPageContentStream contentStream, float x, float y, String etiqueta, String valor) throws Exception {
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(71, 85, 105));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
+        contentStream.newLineAtOffset(x, y);
+        contentStream.showText(etiqueta + ":");
+        contentStream.endText();
+
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(15, 23, 42));
+        contentStream.setFont(PDType1Font.HELVETICA, 10);
+        contentStream.newLineAtOffset(x + 118, y);
+        contentStream.showText(valor);
+        contentStream.endText();
+    }
+
+    private void dibujarBloqueResumen(PDPageContentStream contentStream, float x, float y, float width, float height, ResultadoVP resumen) throws Exception {
         contentStream.setNonStrokingColor(rgb(31, 65, 135));
-        contentStream.addRect(50, pageHeight - 330, 500, 70);
+        contentStream.addRect(x, y - height, 500, height);
         contentStream.fill();
 
         contentStream.setNonStrokingColor(rgb(255, 255, 255));
-        contentStream.addRect(56, pageHeight - 324, 488, 58);
+        contentStream.addRect(x + 6, y - height + 6, 500 - 12, height - 12);
         contentStream.fill();
 
-        dibujarLineaTexto(contentStream, 70, pageHeight - 295, "Mejor opcion: " + resultado.mejor(), PDType1Font.HELVETICA_BOLD, 12, rgb(31, 65, 135));
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(31, 65, 135));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 13);
+        contentStream.newLineAtOffset(x + 16, y - 28);
+        contentStream.showText("Resumen y recomendacion");
+        contentStream.endText();
+
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(15, 23, 42));
+        contentStream.setFont(PDType1Font.HELVETICA, 11);
+        contentStream.newLineAtOffset(x + 16, y - 52);
+        contentStream.showText("Tasa de descuento aplicada: " + formatear(resumen.tasa()) + "%");
+        contentStream.endText();
+
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(15, 23, 42));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 11);
+        contentStream.newLineAtOffset(x + 16, y - 72);
+        contentStream.showText("VP Alternativa A: $" + formatear(resumen.vpA()) + "   VP Alternativa B: $" + formatear(resumen.vpB()));
+        contentStream.endText();
+
+        contentStream.setNonStrokingColor(rgb(236, 241, 252));
+        contentStream.addRect(x + 16, y - 104, 500 - 32, 30);
+        contentStream.fill();
+
+        contentStream.beginText();
+        contentStream.setNonStrokingColor(rgb(31, 65, 135));
+        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
+        contentStream.newLineAtOffset(x + 24, y - 85);
+        contentStream.showText("Recomendacion: " + resumen.mejor() + " es la opcion equivalente mas conveniente.");
+        contentStream.endText();
     }
 
     private void dibujarPie(PDPageContentStream contentStream, float pageWidth) throws Exception {

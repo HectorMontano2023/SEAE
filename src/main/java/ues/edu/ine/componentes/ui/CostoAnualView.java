@@ -38,7 +38,9 @@ import ues.edu.ine.base.ui.MainLayout;
 @Menu(order = 2, icon = "vaadin:coins", title = "Costo Anual")
 public class CostoAnualView extends VerticalLayout {
 
-    private final Paragraph resultado = new Paragraph("Complete los datos y presione Calcular para ver el costo anual equivalente.");
+    private final Paragraph resultadoA = new Paragraph("Costo Anual A: --");
+    private final Paragraph resultadoB = new Paragraph("Costo Anual B: --");
+    private final Paragraph mejorResultado = new Paragraph("Mejor alternativa: --");
     private final NumberField tasaDescuentoField = new NumberField();
     private AlternativaCosto alternativaA;
     private AlternativaCosto alternativaB;
@@ -97,15 +99,45 @@ public class CostoAnualView extends VerticalLayout {
         exportar.setEnabled(false);
         exportar.setEnabled(false);
 
+        HorizontalLayout acciones = new HorizontalLayout(calcular, exportar);
+        acciones.setSpacing(true);
+
+        VerticalLayout indicaciones = new VerticalLayout();
+        indicaciones.setWidthFull();
+        indicaciones.setAlignItems(Alignment.CENTER);
+        indicaciones.addClassName("seae-callout-card");
+        Paragraph indicacionTexto = new Paragraph("Complete los datos y presione Calcular para ver el costo anual equivalente.");
+        indicacionTexto.getStyle().set("margin", "0").set("text-align", "center");
+        indicaciones.add(indicacionTexto);
+
+        VerticalLayout panelResultados = new VerticalLayout();
+        panelResultados.setWidthFull();
+        panelResultados.setMaxWidth("750px");
+        panelResultados.setAlignItems(Alignment.CENTER);
+        panelResultados.setVisible(false);
+        panelResultados.addClassName("seae-result-card");
+
+        H2 tituloResultados = new H2("Resultados");
+        tituloResultados.getStyle().set("color", "#23406f");
+        resultadoA.addClassName("seae-result-value");
+        resultadoB.addClassName("seae-result-value");
+        mejorResultado.addClassName("seae-result-value");
+        mejorResultado.addClassName("seae-result-highlight");
+        panelResultados.add(tituloResultados, resultadoA, resultadoB, mejorResultado);
+
         calcular.addClickListener(event -> {
             ResultadoComparacion resultadoCalculado = calcularResultados();
             if (!mostrarResultado(resultadoCalculado)) {
                 exportar.setEnabled(false);
+                panelResultados.setVisible(false);
+                indicaciones.setVisible(true);
                 return;
             }
 
+            panelResultados.setVisible(true);
+            indicaciones.setVisible(false);
             exportar.setEnabled(true);
-            Notification.show("Cálculo realizado", 3000, Position.MIDDLE);
+            Notification.show("Calculo realizado", 3000, Position.MIDDLE);
         });
 
         Anchor descargaPdf = new Anchor();
@@ -114,7 +146,7 @@ public class CostoAnualView extends VerticalLayout {
 
         exportar.addClickListener(event -> {
             if (ultimoResultado == null) {
-                Notification.show("Primero realice un cálculo válido antes de exportar.");
+                Notification.show("Primero realice un calculo valido antes de exportar.");
                 return;
             }
 
@@ -122,21 +154,15 @@ public class CostoAnualView extends VerticalLayout {
             descargaPdf.getElement().executeJs("this.click()");
         });
 
-        HorizontalLayout acciones = new HorizontalLayout(calcular, exportar);
-        acciones.setSpacing(true);
-
-        VerticalLayout resultadoCard = new VerticalLayout();
-        resultadoCard.addClassName("seae-result-card");
-        resultadoCard.add(resultado);
-
         mainContainer.add(
             titulo,
             subtitulo,
             alternativas,
             tasaLayout,
             acciones,
-            descargaPdf,
-            resultadoCard
+            indicaciones,
+            panelResultados,
+            descargaPdf
         );
 
         add(mainContainer);
@@ -184,18 +210,15 @@ public class CostoAnualView extends VerticalLayout {
 
     private boolean mostrarResultado(ResultadoComparacion resultadoCalculado) {
         if (resultadoCalculado == null) {
-            resultado.setText("Complete todos los campos correctamente para calcular.");
             ultimoResultado = null;
             return false;
         }
 
         ultimoResultado = resultadoCalculado;
 
-        resultado.setText(
-            "Costo anual A: $" + formatear(resultadoCalculado.costoA()) +
-            " | Costo anual B: $" + formatear(resultadoCalculado.costoB()) +
-            " | Mejor opción: " + resultadoCalculado.mejor()
-        );
+        resultadoA.setText("Costo anual A: $" + formatear(resultadoCalculado.costoA()));
+        resultadoB.setText("Costo anual B: $" + formatear(resultadoCalculado.costoB()));
+        mejorResultado.setText("Mejor opcion: " + resultadoCalculado.mejor());
         return true;
     }
 
