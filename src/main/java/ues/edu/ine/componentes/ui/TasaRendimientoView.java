@@ -63,7 +63,7 @@ public class TasaRendimientoView extends VerticalLayout {
         mainContainer.setAlignItems(Alignment.CENTER);
         mainContainer.addClassName("seae-surface");
 
-        H1 titulo = new H1("Evaluacion de Alternativas Economicas: Tasa de Rendimiento");
+        H1 titulo = new H1("Evaluación de Alternativas Economicas: Tasa de Rendimiento");
         titulo.addClassName("seae-view-title");
 
         Paragraph subtitulo = new Paragraph("Compare dos alternativas usando la TIR.");
@@ -521,7 +521,7 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.lineTo(pageWidth - 50, 70);
         contentStream.stroke();
 
-        dibujarTexto(contentStream, 50, 52, "Generado por SEAE - Sistema de Evaluacion de Alternativas Economicas",
+        dibujarTexto(contentStream, 50, 52, "Generado por SEAE - Sistema de Evaluación de Alternativas Económicas",
                 PDType1Font.HELVETICA, 9, rgb(100, 116, 139));
     }
 

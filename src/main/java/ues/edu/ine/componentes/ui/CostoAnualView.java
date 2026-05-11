@@ -37,7 +37,7 @@ import ues.edu.ine.base.ui.MainLayout;
 
 @Route(value = "costo-anual", layout = MainLayout.class)
 @PageTitle("Costo Anual | SEAE")
-@Menu(order = 2, icon = "vaadin:coins", title = "Costo Anual")
+@Menu(order = 2, icon = "vaadin:book", title = "Costo Anual")
 public class CostoAnualView extends VerticalLayout {
 
     private final Paragraph resultadoA = new Paragraph("Costo Anual A: --");
@@ -465,7 +465,7 @@ public class CostoAnualView extends VerticalLayout {
         contentStream.setNonStrokingColor(rgb(100, 116, 139));
         contentStream.setFont(PDType1Font.HELVETICA, 9);
         contentStream.newLineAtOffset(50, 52);
-        contentStream.showText("Generado por SEAE - Sistema de Evaluacion de Alternativas Economicas");
+        contentStream.showText("Generado por SEAE - Sistema de Evaluación de Alternativas Económicas");
         contentStream.endText();
     }
 
