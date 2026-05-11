@@ -63,7 +63,7 @@ public class TasaRendimientoView extends VerticalLayout {
         mainContainer.setAlignItems(Alignment.CENTER);
         mainContainer.addClassName("seae-surface");
 
-        H1 titulo = new H1("Evaluación de Alternativas Economicas: Tasa de Rendimiento");
+        H1 titulo = new H1("Evaluación de Alternativas Económicas: Tasa de Rendimiento");
         titulo.addClassName("seae-view-title");
 
         Paragraph subtitulo = new Paragraph("Compare dos alternativas usando la TIR.");
@@ -141,7 +141,7 @@ public class TasaRendimientoView extends VerticalLayout {
                         return new ByteArrayInputStream(new byte[0]);
                     }
                 }));
-                Notification.show("Comparacion realizada", 3000, Position.MIDDLE);
+                Notification.show("Comparación realizada", 3000, Position.MIDDLE);
             } catch (IllegalArgumentException ex) {
                 ultimoResultado = null;
                 panelResultados.setVisible(false);
@@ -167,12 +167,12 @@ public class TasaRendimientoView extends VerticalLayout {
     private AlternativaTir crearAlternativa(String tituloTexto) {
         VerticalLayout card = crearCardBase(tituloTexto);
 
-        NumberField inversion = new NumberField("Inversion inicial");
-        inversion.setPlaceholder("Ingrese la inversion inicial");
+        NumberField inversion = new NumberField("Inversión inicial");
+        inversion.setPlaceholder("Ingrese la inversión inicial");
         inversion.setWidthFull();
 
-        NumberField periodos = new NumberField("Numero de periodos (n)");
-        periodos.setPlaceholder("Ingrese el numero de periodos");
+        NumberField periodos = new NumberField("Número de períodos (n)");
+        periodos.setPlaceholder("Ingrese el número de períodos");
         periodos.setWidthFull();
         periodos.setMin(1);
         periodos.setStep(1);
@@ -212,14 +212,14 @@ public class TasaRendimientoView extends VerticalLayout {
 
     private ResultadoTir calcularResultado() {
         double inversionAValor = obtenerNumeroObligatorio(alternativaA.inversion(),
-                "Alternativa A: la inversion inicial es obligatoria");
+                "Alternativa A: la inversión inicial es obligatoria");
         double inversionBValor = obtenerNumeroObligatorio(alternativaB.inversion(),
-                "Alternativa B: la inversion inicial es obligatoria");
+                "Alternativa B: la inversión inicial es obligatoria");
 
         int vidaAValor = obtenerPeriodoObligatorio(alternativaA.periodos(),
-                "Alternativa A: la vida util debe ser mayor que cero");
+                "Alternativa A: la vida útil debe ser mayor que cero");
         int vidaBValor = obtenerPeriodoObligatorio(alternativaB.periodos(),
-                "Alternativa B: la vida util debe ser mayor que cero");
+                "Alternativa B: la vida útil debe ser mayor que cero");
 
         if (alternativaA.flujos().size() != vidaAValor) {
             throw new IllegalArgumentException("Alternativa A: complete un flujo por cada periodo generado");
@@ -257,14 +257,14 @@ public class TasaRendimientoView extends VerticalLayout {
     private double[] parseFlujos(AlternativaTir alternativa) {
         List<NumberField> campos = alternativa.flujos();
         if (campos.isEmpty()) {
-            throw new IllegalArgumentException("Indique el numero de periodos antes de calcular");
+            throw new IllegalArgumentException("Indique el número de períodos antes de calcular");
         }
 
         double[] flujos = new double[campos.size()];
         for (int i = 0; i < campos.size(); i++) {
             NumberField campo = campos.get(i);
             if (campo.isEmpty() || campo.getValue() == null || !Double.isFinite(campo.getValue())) {
-                throw new IllegalArgumentException("Complete los flujos de efectivo de todos los periodos");
+                throw new IllegalArgumentException("Complete los flujos de efectivo de todos los períodos");
             }
 
             flujos[i] = campo.getValue();
@@ -278,7 +278,7 @@ public class TasaRendimientoView extends VerticalLayout {
         alternativa.flujosContainer().removeAll();
 
         if (valorPeriodos == null || !Double.isFinite(valorPeriodos) || valorPeriodos < 1) {
-            Paragraph indicacion = new Paragraph("Indique el numero de periodos para generar los flujos de efectivo.");
+            Paragraph indicacion = new Paragraph("Indique el número de períodos para generar los flujos de efectivo.");
             indicacion.getStyle().set("margin", "0").set("color", "#4b5563");
             alternativa.flujosContainer().add(indicacion);
             return;
@@ -286,7 +286,7 @@ public class TasaRendimientoView extends VerticalLayout {
 
         int periodos = (int) Math.round(valorPeriodos);
         if (Math.abs(periodos - valorPeriodos) > 0.00001) {
-            Paragraph indicacion = new Paragraph("El numero de periodos debe ser entero.");
+            Paragraph indicacion = new Paragraph("El número de períodos debe ser entero.");
             indicacion.getStyle().set("margin", "0").set("color", "#4b5563");
             alternativa.flujosContainer().add(indicacion);
             return;
@@ -431,9 +431,9 @@ public class TasaRendimientoView extends VerticalLayout {
         float textY = y - 48;
         float lineGap = 17;
 
-        dibujarLineaClaveValor(contentStream, textX, textY, "Inversion inicial",
+        dibujarLineaClaveValor(contentStream, textX, textY, "Inversión inicial",
                 "$" + formatear(alternativa.inversion().getValue()));
-        dibujarLineaClaveValor(contentStream, textX, textY - lineGap, "Periodos",
+        dibujarLineaClaveValor(contentStream, textX, textY - lineGap, "Períodos",
                 formatear(alternativa.periodos().getValue()) + " años");
 
         String flujosStr = formatearFlujos(alternativa.flujos());
@@ -456,7 +456,7 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.setNonStrokingColor(rgb(109, 117, 130));
         contentStream.setFont(PDType1Font.HELVETICA_OBLIQUE, 9);
         contentStream.newLineAtOffset(textX, y - 140);
-        contentStream.showText("Alternativa registrada para comparacion economica.");
+        contentStream.showText("Alternativa registrada para comparación económica.");
         contentStream.endText();
     }
 
@@ -491,7 +491,7 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.setNonStrokingColor(rgb(35, 64, 111));
         contentStream.setFont(PDType1Font.HELVETICA_BOLD, 13);
         contentStream.newLineAtOffset(x + 16, y - 28);
-        contentStream.showText("Resumen y recomendacion");
+        contentStream.showText("Resumen y recomendación");
         contentStream.endText();
 
         contentStream.beginText();
@@ -511,7 +511,7 @@ public class TasaRendimientoView extends VerticalLayout {
         contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
         contentStream.newLineAtOffset(x + 24, y - 65);
         contentStream.showText(
-                "Recomendacion: " + resultado.mejorAlternativa() + " es la opcion equivalente mas conveniente.");
+                "Recomendación: " + resultado.mejorAlternativa() + " es la opción equivalente más conveniente.");
         contentStream.endText();
     }
 
