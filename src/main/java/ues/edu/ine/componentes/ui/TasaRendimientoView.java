@@ -518,266 +518,292 @@ private VerticalLayout crearAlternativaB() {
     }
 
     // CALCULAR TIR
-    private double calcularTIR(
-        double inversionInicial,
-        String flujosTexto
+private double calcularTIR(
+    double inversionInicial,
+    String flujosTexto
+) {
+
+    String[] valores =
+        flujosTexto.split(",");
+
+    double[] flujos =
+        new double[valores.length];
+
+    for (
+        int i = 0;
+        i < valores.length;
+        i++
     ) {
 
-        String[] valores =
-            flujosTexto.split(",");
+        flujos[i] =
+            Double.parseDouble(
+                valores[i].trim()
+            );
+    }
 
-        double[] flujos =
-            new double[valores.length];
+    double low = -0.9999;
+
+    double high = 1000.0;
+
+    double tir = 0;
+
+    for (
+        int iteracion = 0;
+        iteracion < 1000;
+        iteracion++
+    ) {
+
+        tir =
+            (low + high) / 2.0;
+
+        double vpn =
+            -inversionInicial;
 
         for (
-            int i = 0;
-            i < valores.length;
-            i++
+            int t = 0;
+            t < flujos.length;
+            t++
         ) {
 
-            flujos[i] =
-                Double.parseDouble(
-                    valores[i].trim()
+            vpn +=
+                flujos[t] /
+                Math.pow(
+                    1 + tir,
+                    t + 1
                 );
         }
 
-        double tir = 0.1;
-
-        for (
-            int iteracion = 0;
-            iteracion < 1000;
-            iteracion++
+        if (
+            Math.abs(vpn)
+            < 0.0000001
         ) {
 
-            double vpn =
-                -inversionInicial;
-
-            double derivada = 0;
-
-            for (
-                int t = 0;
-                t < flujos.length;
-                t++
-            ) {
-
-                vpn +=
-                    flujos[t] /
-                    Math.pow(
-                        1 + tir,
-                        t + 1
-                    );
-
-                derivada -=
-                    (t + 1)
-                    * flujos[t] /
-                    Math.pow(
-                        1 + tir,
-                        t + 2
-                    );
-            }
-
-            double nuevaTir =
-                tir -
-                (vpn / derivada);
-
-            if (
-                Math.abs(
-                    nuevaTir - tir
-                ) < 0.00001
-            ) {
-
-                tir = nuevaTir;
-
-                break;
-            }
-
-            tir = nuevaTir;
+            return tir * 100;
         }
 
-        return tir * 100;
+        if (vpn > 0) {
+
+            low = tir;
+
+        } else {
+
+            high = tir;
+        }
     }
 
-   // GENERAR PDF
+    return tir * 100;
+}
+  // GENERAR PDF
 private StreamResource generarPDF()
     throws Exception {
 
     ByteArrayOutputStream baos =
         new ByteArrayOutputStream();
 
-    Document documento =
-        new Document();
+    org.apache.pdfbox.pdmodel.PDDocument document =
+        new org.apache.pdfbox.pdmodel.PDDocument();
 
-    PdfWriter.getInstance(
-        documento,
-        baos
-    );
-
-    documento.open();
-
-    // TITULO
-    com.lowagie.text.Font tituloFont =
-        new com.lowagie.text.Font(
-            com.lowagie.text.Font.HELVETICA,
-            20,
-            com.lowagie.text.Font.BOLD
+    org.apache.pdfbox.pdmodel.PDPage page =
+        new org.apache.pdfbox.pdmodel.PDPage(
+            org.apache.pdfbox.pdmodel.common.PDRectangle.LETTER
         );
 
-    com.lowagie.text.Font subtituloFont =
-        new com.lowagie.text.Font(
-            com.lowagie.text.Font.HELVETICA,
-            15,
-            com.lowagie.text.Font.BOLD
+    document.addPage(page);
+
+    org.apache.pdfbox.pdmodel.PDPageContentStream contentStream =
+        new org.apache.pdfbox.pdmodel.PDPageContentStream(
+            document,
+            page
         );
 
-    com.lowagie.text.Font textoFont =
-        new com.lowagie.text.Font(
-            com.lowagie.text.Font.HELVETICA,
-            12,
-            com.lowagie.text.Font.NORMAL
-        );
+    float pageWidth =
+        page.getMediaBox().getWidth();
 
-    com.lowagie.text.Font resultadoFont =
-        new com.lowagie.text.Font(
-            com.lowagie.text.Font.HELVETICA,
-            13,
-            com.lowagie.text.Font.BOLD
-        );
+    float pageHeight =
+        page.getMediaBox().getHeight();
 
-    com.lowagie.text.Paragraph titulo =
-        new com.lowagie.text.Paragraph(
-            "REPORTE DE TASA DE RENDIMIENTO",
-            tituloFont
-        );
-
-    titulo.setAlignment(
-        com.lowagie.text.Element.ALIGN_CENTER
+    // FONDO
+    contentStream.setNonStrokingColor(
+        rgb(245,247,252)
     );
 
-    documento.add(titulo);
-
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            " "
-        )
+    contentStream.addRect(
+        0,
+        0,
+        pageWidth,
+        pageHeight
     );
 
-    // ALTERNATIVA A
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "ALTERNATIVA A",
-            subtituloFont
-        )
+    contentStream.fill();
+
+    // ENCABEZADO
+    contentStream.setNonStrokingColor(
+        rgb(36,64,111)
     );
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Inversión Inicial: $"
-            + inversionA.getValue(),
-            textoFont
-        )
+    contentStream.addRect(
+        0,
+        pageHeight - 115,
+        pageWidth,
+        115
     );
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Flujos de efectivo: "
-            + flujoA.getValue(),
-            textoFont
-        )
+    contentStream.fill();
+
+    escribirTexto(
+        contentStream,
+        50,
+        pageHeight - 55,
+        "SEAE - Reporte de Tasa de Rendimiento",
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD,
+        20,
+        rgb(255,255,255)
     );
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Vida útil: "
-            + vidaA.getValue()
-            + " años",
-            textoFont
-        )
+    escribirTexto(
+        contentStream,
+        50,
+        pageHeight - 75,
+        "Comparacion de alternativas con TIR.",
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA,
+        10,
+        rgb(255,255,255)
     );
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "TIR Alternativa A: "
-            + String.format(
-                "%.2f",
-                tirA
-            )
-            + "%",
-            resultadoFont
-        )
+    // TARJETAS
+    dibujarTarjeta(
+        contentStream,
+        50,
+        650,
+        "Alternativa A",
+        inversionA.getValue(),
+        flujoA.getValue(),
+        vidaA.getValue(),
+        tirA,
+        new int[]{54,93,173}
     );
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            " "
-        )
+    dibujarTarjeta(
+        contentStream,
+        308,
+        650,
+        "Alternativa B",
+        inversionB.getValue(),
+        flujoB.getValue(),
+        vidaB.getValue(),
+        tirB,
+        new int[]{91,123,216}
     );
 
-    // ALTERNATIVA B
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "ALTERNATIVA B",
-            subtituloFont
-        )
+    // RESUMEN
+    contentStream.setNonStrokingColor(
+        rgb(35,64,111)
     );
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Inversión Inicial: $"
-            + inversionB.getValue(),
-            textoFont
-        )
+    contentStream.addRect(
+        50,
+        285,
+        500,
+        110
     );
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Flujos de efectivo: "
-            + flujoB.getValue(),
-            textoFont
-        )
+    contentStream.fill();
+
+    contentStream.setNonStrokingColor(
+        rgb(255,255,255)
     );
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "Vida útil: "
-            + vidaB.getValue()
-            + " años",
-            textoFont
-        )
+    contentStream.addRect(
+        56,
+        291,
+        488,
+        98
     );
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            "TIR Alternativa B: "
-            + String.format(
-                "%.2f",
-                tirB
-            )
-            + "%",
-            resultadoFont
-        )
+    contentStream.fill();
+
+    escribirTexto(
+        contentStream,
+        66,
+        365,
+        "Resumen y recomendacion",
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD,
+        13,
+        rgb(35,64,111)
     );
 
-    documento.add(
-        new com.lowagie.text.Paragraph(
-            " "
-        )
+    escribirTexto(
+        contentStream,
+        66,
+        340,
+        "TIR Alternativa A: "
+        + String.format("%.2f", tirA)
+        + "%   TIR Alternativa B: "
+        + String.format("%.2f", tirB)
+        + "%",
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD,
+        11,
+        rgb(15,23,42)
     );
 
-    // MEJOR OPCION
-    com.lowagie.text.Paragraph mejor =
-        new com.lowagie.text.Paragraph(
-            "MEJOR OPCIÓN: "
-            + mejorAlternativa,
-            resultadoFont
-        );
-
-    mejor.setAlignment(
-        com.lowagie.text.Element.ALIGN_CENTER
+    // CAJA RECOMENDACION
+    contentStream.setNonStrokingColor(
+        rgb(236,241,252)
     );
 
-    documento.add(mejor);
+    contentStream.addRect(
+        66,
+        305,
+        460,
+        30
+    );
 
-    documento.close();
+    contentStream.fill();
+
+    escribirTexto(
+        contentStream,
+        74,
+        315,
+        "Recomendacion: "
+        + mejorAlternativa
+        + " es la opcion mas conveniente.",
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD,
+        10,
+        rgb(35,64,111)
+    );
+
+    // PIE
+    contentStream.setStrokingColor(
+        rgb(214,222,235)
+    );
+
+    contentStream.moveTo(
+        50,
+        70
+    );
+
+    contentStream.lineTo(
+        pageWidth - 50,
+        70
+    );
+
+    contentStream.stroke();
+
+    escribirTexto(
+        contentStream,
+        50,
+        52,
+        "Generado por SEAE - Sistema de Evaluacion de Alternativas Economicas",
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA,
+        9,
+        rgb(100,116,139)
+    );
+
+    contentStream.close();
+
+    document.save(baos);
+
+    document.close();
 
     return new StreamResource(
         "reporte_tir.pdf",
@@ -785,6 +811,188 @@ private StreamResource generarPDF()
             new ByteArrayInputStream(
                 baos.toByteArray()
             )
+    );
+}
+
+// DIBUJAR TARJETA
+private void dibujarTarjeta(
+    org.apache.pdfbox.pdmodel.PDPageContentStream contentStream,
+    float x,
+    float y,
+    String titulo,
+    Double inversion,
+    String flujos,
+    Double vida,
+    double tir,
+    int[] color
+) throws Exception {
+
+    float width = 240;
+    float height = 200;
+
+    // TARJETA
+    contentStream.setNonStrokingColor(
+        rgb(255,255,255)
+    );
+
+    contentStream.addRect(
+        x,
+        y - height,
+        width,
+        height
+    );
+
+    contentStream.fill();
+
+    // BARRA SUPERIOR
+    contentStream.setNonStrokingColor(
+        rgb(color[0],color[1],color[2])
+    );
+
+    contentStream.addRect(
+        x,
+        y - 22,
+        width,
+        22
+    );
+
+    contentStream.fill();
+
+    escribirTexto(
+        contentStream,
+        x + 12,
+        y - 16,
+        titulo,
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD,
+        12,
+        rgb(255,255,255)
+    );
+
+    // TEXOS
+    escribirTexto(
+        contentStream,
+        x + 14,
+        y - 48,
+        "Inversion inicial: $" + inversion,
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD,
+        10,
+        rgb(71,85,105)
+    );
+
+    escribirTexto(
+        contentStream,
+        x + 14,
+        y - 68,
+        "Flujos: " + flujos,
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA,
+        10,
+        rgb(15,23,42)
+    );
+
+    escribirTexto(
+        contentStream,
+        x + 14,
+        y - 88,
+        "Vida util: " + vida + " años",
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA,
+        10,
+        rgb(15,23,42)
+    );
+
+    // LINEA
+    contentStream.setStrokingColor(
+        rgb(230,235,244)
+    );
+
+    contentStream.moveTo(
+        x + 12,
+        y - 110
+    );
+
+    contentStream.lineTo(
+        x + width - 12,
+        y - 110
+    );
+
+    contentStream.stroke();
+
+    escribirTexto(
+        contentStream,
+        x + 14,
+        y - 135,
+        "TIR:",
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD,
+        11,
+        rgb(71,85,105)
+    );
+
+    escribirTexto(
+        contentStream,
+        x + 45,
+        y - 135,
+        String.format("%.2f", tir) + "%",
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD,
+        11,
+        rgb(color[0],color[1],color[2])
+    );
+
+    escribirTexto(
+        contentStream,
+        x + 14,
+        y - 165,
+        "Alternativa registrada para comparacion economica.",
+        org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_OBLIQUE,
+        9,
+        rgb(109,117,130)
+    );
+}
+
+// ESCRIBIR TEXTO
+private void escribirTexto(
+    org.apache.pdfbox.pdmodel.PDPageContentStream contentStream,
+    float x,
+    float y,
+    String texto,
+    org.apache.pdfbox.pdmodel.font.PDType1Font font,
+    int size,
+    org.apache.pdfbox.pdmodel.graphics.color.PDColor color
+) throws Exception {
+
+    contentStream.beginText();
+
+    contentStream.setNonStrokingColor(
+        color
+    );
+
+    contentStream.setFont(
+        font,
+        size
+    );
+
+    contentStream.newLineAtOffset(
+        x,
+        y
+    );
+
+    contentStream.showText(texto);
+
+    contentStream.endText();
+}
+
+// RGB
+private org.apache.pdfbox.pdmodel.graphics.color.PDColor rgb(
+    int r,
+    int g,
+    int b
+) {
+
+    return new org.apache.pdfbox.pdmodel.graphics.color.PDColor(
+        new float[]{
+            r / 255f,
+            g / 255f,
+            b / 255f
+        },
+        org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB.INSTANCE
     );
 }
 
